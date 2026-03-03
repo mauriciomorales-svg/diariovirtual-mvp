@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: diariovirtual-app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./backend:/var/www/html
+      - ./backend/storage/app/public:/var/www/html/storage/app/public
+    networks:
+      - diariovirtual-network
+    depends_on:
+      - postgres
+      - redis
+
+  nginx:
+    image: nginx:alpine
+    container_name: diariovirtual-nginx
+    restart: unless-stopped
+    ports:
+      - "8001:80"
+    volumes:
+      - ./backend:/var/www/html
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - diariovirtual-network
+    depends_on:
+      - app
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: diariovirtual-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: diariovirtual
+      POSTGRES_USER: diariovirtual
+      POSTGRES_PASSWORD: diariovirtual2026
+    volumes:
+      - postgresdata:/var/lib/postgresql/data
+    ports:
+      - "5435:5432"
+    networks:
+      - diariovirtual-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: diariovirtual-redis
+    restart: unless-stopped
+    ports:
+      - "6382:6379"
+    volumes:
+      - redisdata:/data
+    networks:
+      - diariovirtual-network
+
+networks:
+  diariovirtual-network:
+    driver: bridge
+
+volumes:
+  postgresdata:
+  redisdata:
