@@ -1,7 +1,6 @@
 import { Article } from '@/types/article';
 
-// API URL - servidor principal PHP en puerto 8091
-const API_URL = 'http://127.0.0.1:8091';
+const LARAVEL_API = 'http://127.0.0.1:8000';
 
 export async function getArticles(): Promise<{ articles: Article[]; total: number; showing: string }> {
   try {
@@ -22,8 +21,8 @@ export async function getArticles(): Promise<{ articles: Article[]; total: numbe
   }
 
   try {
-    // Fallback to main API
-    const res = await fetch(`${API_URL}/articles-api.php`, {
+    // Fallback to Laravel API
+    const res = await fetch(`${LARAVEL_API}/api/v1/articles`, {
       next: { revalidate: 60 },
     });
 
@@ -32,10 +31,11 @@ export async function getArticles(): Promise<{ articles: Article[]; total: numbe
     }
 
     const data = await res.json();
+    const items = data.data || data;
     return {
-      articles: data.data || [],
-      total: data.total || 0,
-      showing: data.showing || ''
+      articles: Array.isArray(items) ? items : [],
+      total: data.total ?? (Array.isArray(items) ? items.length : 0),
+      showing: data.showing || 'Artículos recientes'
     };
   } catch (error) {
     console.error('Main API Error:', error);
@@ -49,7 +49,7 @@ export async function getArticles(): Promise<{ articles: Article[]; total: numbe
 }
 
 export async function getArticle(slug: string): Promise<Article> {
-  const res = await fetch(`${API_URL}/article-api.php?slug=${slug}`, {
+  const res = await fetch(`${LARAVEL_API}/api/v1/articles/${encodeURIComponent(slug)}`, {
     next: { revalidate: 3600 },
   });
 

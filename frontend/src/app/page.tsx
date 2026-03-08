@@ -2,9 +2,11 @@ import { getArticles } from '@/lib/api-simple';
 import ArticleCard from '@/components/ArticleCard';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import RefreshButton from '@/components/RefreshButton';
+import { getProxiedImageUrl } from '@/lib/image';
 import { Article } from '@/types/article';
 
-export const revalidate = 60;
+export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
   let articles: Article[] = [];
@@ -20,11 +22,6 @@ export default async function HomePage() {
   } catch (e) {
     error = e instanceof Error ? e.message : 'Error al cargar noticias';
   }
-
-  // Debug logging
-  console.log('Articles loaded:', articles.length);
-  console.log('Error:', error);
-  console.log('Total:', total);
 
   // Separar noticia destacada (la primera) del resto
   const featuredArticle = articles[0];
@@ -53,7 +50,7 @@ export default async function HomePage() {
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
               <p className="font-bold">Error:</p>
               <p>{error}</p>
-              <p className="text-sm mt-2">Verifica que el backend esté corriendo en http://localhost:8000</p>
+              <p className="text-sm mt-2">Verifica que el backend Laravel esté corriendo en {process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}</p>
             </div>
           )}
 
@@ -61,24 +58,35 @@ export default async function HomePage() {
           {articles.length === 0 && !error && (
             <div className="text-center py-12 bg-white rounded-lg shadow">
               <p className="text-gray-500 text-lg">No hay noticias disponibles</p>
-              <p className="text-gray-400 mt-2">Usa el panel de Gemini para agregar noticias</p>
+              <p className="text-gray-400 mt-2">Crea noticias locales con IA o trae noticias de otros medios</p>
+              <div className="flex flex-wrap justify-center gap-3 mt-4">
               <a 
-                href="http://localhost:8000/dev/gemini/enhanced" 
-                className="inline-block mt-4 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+                href={`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/dev/gemini/enhanced`}
+                className="inline-flex items-center px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
               >
-                📝 Crear Noticia
+                📝 Crear Noticia (IA)
               </a>
+              <a 
+                href={`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/dev/news/external`}
+                className="inline-flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+              >
+                  📰 Traer Noticias Externas
+                </a>
+              </div>
             </div>
           )}
 
           {articles.length > 0 && (
             <>
               {/* Stats Bar */}
-              <div className="flex justify-between items-center mb-6 text-sm text-gray-600">
+              <div className="flex justify-between items-center mb-6 text-sm text-gray-600 flex-wrap gap-2">
                 <span>{showing}</span>
-                <span className="text-red-600 font-medium">
-                  {new Date().toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' })}
-                </span>
+                <div className="flex items-center gap-3">
+                  <RefreshButton />
+                  <span className="text-red-600 font-medium">
+                    {new Date().toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' })}
+                  </span>
+                </div>
               </div>
 
               {/* Featured Article */}
@@ -91,7 +99,7 @@ export default async function HomePage() {
                     <div className="md:flex">
                       <div className="md:w-2/3 relative h-64 md:h-96">
                         <img
-                          src={featuredArticle.image_url}
+                          src={getProxiedImageUrl(featuredArticle.image_url, { title: featuredArticle.title, slug: featuredArticle.slug })}
                           alt={featuredArticle.title}
                           className="w-full h-full object-cover"
                         />

@@ -38,6 +38,9 @@
                         <p class="text-gray-600 mt-2">Transforma noticias nacionales para la audiencia de Malleco con IA generativa</p>
                     </div>
                     <div class="flex space-x-3">
+                        <a href="{{ route('admin.articles.index') }}" class="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-all transform hover:scale-105">
+                            <i class="fas fa-image mr-2"></i>Gestionar fotos
+                        </a>
                         <button onclick="checkHealth()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all transform hover:scale-105">
                             <i class="fas fa-heartbeat mr-2"></i>Health Check
                         </button>

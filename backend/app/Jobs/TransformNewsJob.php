@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Services\GeminiService;
+use App\Services\ImageExtractorService;
 use App\Models\Article;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -45,6 +46,14 @@ class TransformNewsJob implements ShouldQueue
             // Transformar con Gemini
             $transformed = $gemini->transformArticle($this->originalContent, $this->originalTitle);
 
+            $imageUrl = $transformed['image_url'];
+            if (str_contains($imageUrl ?? '', 'via.placeholder.com')) {
+                $extracted = app(ImageExtractorService::class)->extractFromUrl($this->originalUrl);
+                if ($extracted) {
+                    $imageUrl = $extracted;
+                }
+            }
+
             // Crear o actualizar artículo
             $article = Article::updateOrCreate(
                 [
@@ -55,7 +64,7 @@ class TransformNewsJob implements ShouldQueue
                     'slug' => $transformed['slug'],
                     'excerpt' => $transformed['excerpt'],
                     'content' => $transformed['content'],
-                    'image_url' => $transformed['image_url'],
+                    'image_url' => $imageUrl,
                     'is_external' => true,
                     'external_url' => $this->originalUrl,
                     'status' => 'published',

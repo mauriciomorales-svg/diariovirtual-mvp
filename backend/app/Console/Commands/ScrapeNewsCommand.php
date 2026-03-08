@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Article;
+use App\Services\ImageExtractorService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -16,32 +17,36 @@ class ScrapeNewsCommand extends Command
     protected $signature = 'news:scrape';
     protected $description = 'Scrape news from RSS feeds';
 
+    private const MAX_ITEMS = 30;
+
     public function handle()
     {
-        $this->info('Starting news scraping...');
+        $this->info('Starting news scraping (máx ' . self::MAX_ITEMS . ' items)...');
 
         $feeds = [
-            // ✅ Feeds locales Araucanía (prioridad alta)
-            'https://www.malleco7.cl/feed/',              // ✅ Funciona perfectamente
-            'https://www.soychile.cl/rss/araucania.xml',  // ✅ Funciona (49KB)
-            'https://www.ladiscusion.cl/feed/',           // ✅ Funciona (15KB)
-            
-            // ✅ Feeds nacionales (alternativas a BioBioChile/EMOL)
-            'https://www.latercera.com/rss/',             // ✅ 100 items - reemplaza BioBioChile
-            'https://ciperchile.cl/feed/',                // ✅ 16 items - investigación periodística
+            'https://www.malleco7.cl/feed/',
+            'https://www.soychile.cl/rss/araucania.xml',
+            'https://www.ladiscusion.cl/feed/',
+            'https://www.latercera.com/rss/',
+            'https://ciperchile.cl/feed/',
         ];
 
+        $importedCount = 0;
         foreach ($feeds as $feedUrl) {
+            if ($importedCount >= self::MAX_ITEMS) {
+                break;
+            }
             $this->info("Processing feed: {$feedUrl}");
-            $this->processFeed($feedUrl);
+            $importedCount += $this->processFeed($feedUrl, self::MAX_ITEMS - $importedCount);
         }
 
-        Log::info('News scraping completed!');
+        Log::info("News scraping completed! Imported: {$importedCount}");
         return 0;
     }
 
-    private function processFeed($feedUrl)
+    private function processFeed($feedUrl, int $maxItems = 30): int
     {
+        $imported = 0;
         Log::info("Procesando feed: {$feedUrl}");
         
         try {
@@ -54,14 +59,14 @@ class ScrapeNewsCommand extends Command
             
             if (!$response->successful()) {
                 Log::warning("Feed falló: {$feedUrl} - Status: {$response->status()}");
-                return;
+                return 0;
             }
 
             // Validar que sea RSS/XML y no HTML
             $content = $response->body();
             if (strpos($content, '<?xml') === false || strpos($content, '<rss') === false) {
                 Log::warning("Feed no es RSS válido: {$feedUrl} - Contenido no es XML RSS");
-                return;
+                return 0;
             }
 
             // Intentar parsear con SimpleXML con manejo de errores
@@ -72,27 +77,33 @@ class ScrapeNewsCommand extends Command
             
             if ($xml === false || $xmlErrors !== false) {
                 Log::error("Error parsing XML en feed: {$feedUrl} - " . ($xmlErrors ? $xmlErrors['message'] : 'Unknown error'));
-                return;
+                return 0;
             }
             
             if (!isset($xml->channel->item)) {
                 Log::warning("Feed sin items encontrados: {$feedUrl}");
-                return;
+                return 0;
             }
 
             foreach ($xml->channel->item as $item) {
-                $this->processItem($item, $feedUrl);
+                if ($imported >= $maxItems) {
+                    break;
+                }
+                $created = $this->processItem($item, $feedUrl);
+                if ($created) {
+                    $imported++;
+                }
             }
 
-            // Delay 3s entre feeds para simular humano
-            sleep(3);
+            sleep(2);
 
         } catch (\Exception $e) {
             Log::error("Error procesando feed {$feedUrl}: " . $e->getMessage());
         }
+        return $imported;
     }
 
-    private function processItem($item, $feedUrl)
+    private function processItem($item, $feedUrl): bool
     {
         try {
             $title = (string) $item->title;
@@ -100,18 +111,20 @@ class ScrapeNewsCommand extends Command
             $description = (string) $item->description;
             $pubDate = (string) ($item->pubDate ?? $item->date ?? now());
             
-            // Generar hash único para evitar duplicados
             $sourceHash = hash('sha256', $link);
             
-            // Verificar si ya existe
-            $exists = \App\Models\Article::where('source_hash', $sourceHash)->exists();
-            if ($exists) {
-                Log::info("Artículo ya existe, saltando: {$title}");
-                return;
+            if (Article::where('source_hash', $sourceHash)->exists()) {
+                return false;
             }
             
-            // Extraer imagen
-            $imageUrl = $this->processImage($description);
+            // Extraer imagen: feed primero, luego og:image de la página del artículo
+            $imageUrl = $this->extractImageUrl($item, $description);
+            if (!$imageUrl || str_contains($imageUrl ?? '', 'via.placeholder')) {
+                $extracted = app(ImageExtractorService::class)->extractFromUrl($link);
+                if ($extracted) {
+                    $imageUrl = $this->downloadAndSaveImage($extracted) ?? $extracted;
+                }
+            }
             if (!$imageUrl) {
                 $imageUrl = 'https://via.placeholder.com/1200x630/333333/ffffff?text=Diario+Malleco';
             }
@@ -135,57 +148,89 @@ class ScrapeNewsCommand extends Command
             ]);
             
             Log::info("Artículo creado: {$title}");
+            return true;
             
         } catch (\Exception $e) {
             Log::error("Error procesando item: " . $e->getMessage());
+            return false;
         }
     }
 
-    private function processImage($content)
+    /**
+     * Extrae URL de imagen del item RSS (enclosure, media:*, <img>)
+     */
+    private function extractImageUrl($item, $description)
     {
-        // Simple image extraction from HTML
-        if (preg_match('/<img[^>]+src="([^"]+)"[^>]*>/i', $content, $matches)) {
-            $originalUrl = $matches[1];
-            return $this->proxyAndOptimizeImage($originalUrl);
+        $rawUrl = null;
+
+        // 1. enclosure (estándar RSS para medios)
+        if (isset($item->enclosure)) {
+            $enc = $item->enclosure;
+            $type = (string) ($enc['type'] ?? '');
+            if (stripos($type, 'image') !== false) {
+                $rawUrl = (string) ($enc['url'] ?? '');
+            }
+        }
+
+        // 2. media:content (Media RSS)
+        if (!$rawUrl && isset($item->children('media', true)->content)) {
+            $media = $item->children('media', true)->content[0];
+            $type = (string) ($media['type'] ?? '');
+            if (stripos($type, 'image') !== false || !$type) {
+                $rawUrl = (string) ($media['url'] ?? $media['medium'] ?? '');
+            }
+        }
+
+        // 3. media:thumbnail
+        if (!$rawUrl && isset($item->children('media', true)->thumbnail)) {
+            $thumb = $item->children('media', true)->thumbnail[0];
+            $rawUrl = (string) ($thumb['url'] ?? '');
+        }
+
+        // 4. <img> en description
+        if (!$rawUrl && preg_match('/<img[^>]+src="([^"]+)"[^>]*>/i', $description, $m)) {
+            $rawUrl = $m[1];
+        }
+
+        if ($rawUrl && filter_var($rawUrl, FILTER_VALIDATE_URL)) {
+            return $this->downloadAndSaveImage($rawUrl) ?? $rawUrl;
         }
         return null;
     }
-    
-    private function proxyAndOptimizeImage($url)
+
+    /**
+     * Descarga la imagen y la guarda localmente - siempre carga desde nuestro servidor
+     */
+    private function downloadAndSaveImage($url)
     {
         try {
-            // Download image
-            $client = new Client();
-            $response = $client->get($url);
-            
-            if ($response->getStatusCode() !== 200) {
+            $response = Http::timeout(15)
+                ->withHeaders([
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept' => 'image/webp,image/apng,image/*,*/*;q=0.8',
+                    'Referer' => 'https://www.google.com/',
+                ])
+                ->get($url);
+
+            if (!$response->successful()) {
                 return null;
             }
-            
-            // Create image manager instance with GD driver (Intervention Image v3)
+
+            $body = $response->body();
             $manager = new ImageManager(new Driver());
-            $image = $manager->read($response->getBody());
-            
-            // Resize to 1200x630 (OpenGraph standard) - maintaining aspect ratio
+            $image = $manager->read($body);
             $image->scaleDown(1200, 630);
-            
-            // Generate unique filename
+
             $filename = 'images/' . Str::random(40) . '.jpg';
             $storagePath = public_path($filename);
-            
-            // Ensure directory exists
             if (!is_dir(dirname($storagePath))) {
                 mkdir(dirname($storagePath), 0755, true);
             }
-            
-            // Save optimized image (Intervention Image v3 syntax)
-            $image->toJpeg(90)->save($storagePath);
-            
-            // Return public URL
+            $image->toJpeg(85)->save($storagePath);
+
             return url($filename);
-            
-        } catch (\Exception $e) {
-            $this->error("Error processing image: " . $e->getMessage());
+        } catch (\Throwable $e) {
+            Log::debug("No se pudo descargar imagen {$url}: " . $e->getMessage());
             return null;
         }
     }

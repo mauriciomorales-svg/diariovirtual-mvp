@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useState } from 'react';
 
+const BACKEND = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -20,7 +22,9 @@ export default function Header() {
     { name: 'Collipulli', href: '/categoria/collipulli' },
     { name: 'La Araucanía', href: '/categoria/araucania' },
     { name: 'Nacional', href: '/categoria/nacional' },
-    { name: 'Crear Noticia', href: 'http://localhost:8000/dev/gemini/enhanced', external: true },
+    { name: 'Admin', href: `${BACKEND}/dev/dashboard`, external: true },
+    { name: 'Crear Noticia', href: `${BACKEND}/dev/gemini/enhanced`, external: true },
+    { name: 'Traer Externas', href: `${BACKEND}/dev/news/external`, external: true },
   ];
 
   return (

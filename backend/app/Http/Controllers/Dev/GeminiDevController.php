@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Dev;
 use App\Http\Controllers\Controller;
 use App\Jobs\TransformNewsJob;
 use App\Services\GeminiService;
+use App\Services\ImageExtractorService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -128,16 +129,27 @@ class GeminiDevController extends Controller
         }
 
         try {
+            $imageUrl = $request->input('image_url');
+            $sourceUrl = $request->input('source_url');
+
+            // Si es placeholder, intentar extraer imagen real de la URL fuente
+            if (str_contains($imageUrl ?? '', 'via.placeholder.com')) {
+                $extracted = app(ImageExtractorService::class)->extractFromUrl($sourceUrl);
+                if ($extracted) {
+                    $imageUrl = $extracted;
+                }
+            }
+
             $article = \App\Models\Article::updateOrCreate(
                 [
-                    'source_hash' => hash('sha256', $request->input('source_url'))
+                    'source_hash' => hash('sha256', $sourceUrl)
                 ],
                 [
                     'title' => $request->input('title'),
                     'slug' => $request->input('slug'),
                     'excerpt' => $request->input('excerpt'),
                     'content' => $request->input('content'),
-                    'image_url' => $request->input('image_url'),
+                    'image_url' => $imageUrl,
                     'is_external' => true,
                     'external_url' => $request->input('source_url'),
                     'status' => 'published',

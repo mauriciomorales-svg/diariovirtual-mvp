@@ -3,11 +3,12 @@ import { injectAds } from '@/lib/adInjector';
 import NativeAd from '@/components/NativeAd';
 import AdInjector from '@/components/AdInjector';
 import ShareWhatsApp from '@/components/ShareWhatsApp';
-import Image from 'next/image';
+import { getProxiedImageUrl } from '@/lib/image';
 
 export async function generateMetadata({ params }: { params: { slug: string } }) {
   const article = await getArticle(params.slug);
-  
+  const imageUrl = getProxiedImageUrl(article.image_url);
+
   return {
     title: `🚨 ${article.title}`,
     description: article.excerpt,
@@ -15,7 +16,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       title: `🚨 ${article.title}`,
       description: article.excerpt,
       images: [{
-        url: article.image_url,
+        url: imageUrl,
         width: 1200,
         height: 630,
         alt: article.title,
@@ -23,7 +24,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     },
     twitter: {
       card: 'summary_large_image',
-      images: [article.image_url],
+      images: [imageUrl],
     },
   };
 }
@@ -58,14 +59,10 @@ export default async function ArticlePage({ params }: { params: { slug: string }
         </header>
         
         <div className="mb-8">
-          <Image
-            src={article.image_url}
+          <img
+            src={getProxiedImageUrl(article.image_url, { title: article.title, slug: article.slug })}
             alt={article.title}
-            width={1200}
-            height={630}
-            className="w-full h-auto rounded-lg shadow-lg"
-            priority={true}
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 100vw, 800px"
+            className="w-full h-auto rounded-lg shadow-lg object-cover"
           />
         </div>
         

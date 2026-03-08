@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Article;
+use App\Services\ImageExtractorService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -93,6 +94,14 @@ class AutoPublishJob implements ShouldQueue
      */
     private function publishArticle(array $transformedData): void
     {
+        $imageUrl = $transformedData['image_url'] ?? 'https://via.placeholder.com/1200x630/333333/ffffff?text=Diario+Malleco';
+        if (str_contains($imageUrl, 'via.placeholder.com')) {
+            $extracted = app(ImageExtractorService::class)->extractFromUrl($this->sourceUrl);
+            if ($extracted) {
+                $imageUrl = $extracted;
+            }
+        }
+
         $article = Article::updateOrCreate(
             [
                 'source_hash' => hash('sha256', $this->sourceUrl)
@@ -102,7 +111,7 @@ class AutoPublishJob implements ShouldQueue
                 'slug' => $transformedData['slug'],
                 'excerpt' => $transformedData['excerpt'],
                 'content' => $transformedData['content'],
-                'image_url' => $transformedData['image_url'] ?? 'https://via.placeholder.com/1200x630/333333/ffffff?text=Diario+Malleco',
+                'image_url' => $imageUrl,
                 'is_external' => true,
                 'external_url' => $this->sourceUrl,
                 'status' => 'published',
