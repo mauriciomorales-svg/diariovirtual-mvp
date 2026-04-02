@@ -14,14 +14,17 @@
                 <i class="fas fa-newspaper text-red-600 mr-2"></i>
                 Gestionar Noticias
             </h1>
-            <div class="flex gap-3">
+            <div class="flex flex-wrap gap-3">
                 <a href="{{ request()->routeIs('dev.*') ? url('/dev/dashboard') : route('admin.dashboard') }}" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
                     <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
                 </a>
-                <a href="{{ request()->routeIs('dev.*') ? url('/dev/gemini/enhanced') : route('admin.gemini.enhanced') }}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                    <i class="fas fa-plus mr-2"></i>Nueva Noticia
+                <a href="{{ request()->routeIs('dev.*') ? url('/dev/articles/create') : url('/admin/articles/create') }}" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                    <i class="fas fa-pen-nib mr-2"></i>Nueva (sin IA)
                 </a>
-                <a href="http://localhost:3000" target="_blank" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                <a href="{{ request()->routeIs('dev.*') ? url('/dev/gemini/enhanced') : route('admin.gemini.enhanced') }}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    <i class="fas fa-plus mr-2"></i>Nueva con IA
+                </a>
+                <a href="{{ rtrim(config('app.frontend_url'), '/') }}" target="_blank" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
                     <i class="fas fa-external-link-alt mr-2"></i>Ver Diario
                 </a>
             </div>
@@ -40,6 +43,7 @@
                         <tr>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Imagen</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Título</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
                             <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
                         </tr>
@@ -54,13 +58,26 @@
                             <td class="px-4 py-3">
                                 <span class="font-medium text-gray-900 line-clamp-2">{{ Str::limit($article->title, 60) }}</span>
                             </td>
-                            <td class="px-4 py-3 text-sm text-gray-500">
-                                {{ $article->published_at?->format('d/m/Y') }}
+                            <td class="px-4 py-3 text-sm">
+                                @if($article->status === 'published')
+                                    <span class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Publicado</span>
+                                @elseif($article->status === 'scheduled')
+                                    <span class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">Programado</span>
+                                @else
+                                    <span class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">Borrador</span>
+                                @endif
                             </td>
-                            <td class="px-4 py-3 text-right">
+                            <td class="px-4 py-3 text-sm text-gray-500">
+                                {{ $article->published_at?->format('d/m/Y H:i') ?? '—' }}
+                            </td>
+                            <td class="px-4 py-3 text-right space-x-2 whitespace-nowrap">
+                                <a href="{{ route(request()->routeIs('dev.*') ? 'dev.articles.edit' : 'admin.articles.edit', $article) }}"
+                                   class="inline-flex items-center px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm">
+                                    <i class="fas fa-edit mr-1"></i> Editar
+                                </a>
                                 <a href="{{ route(request()->routeIs('dev.*') ? 'dev.articles.edit-image' : 'admin.articles.edit-image', $article) }}"
                                    class="inline-flex items-center px-3 py-1.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 text-sm">
-                                    <i class="fas fa-image mr-1"></i> Cambiar foto
+                                    <i class="fas fa-image mr-1"></i> Foto
                                 </a>
                             </td>
                         </tr>

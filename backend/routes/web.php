@@ -148,8 +148,12 @@ Route::middleware(['auth'])->prefix('admin')->group(function () {
     Route::get('/gemini/batch-import', [GeminiBatchImportController::class, 'showBatchImportForm'])->name('admin.gemini.batch-import');
     Route::post('/gemini/batch-process', [GeminiBatchImportController::class, 'processBatchImport'])->name('admin.gemini.batch-process');
 
-    // Gestión de artículos (cambiar imagen)
+    // Gestión de artículos (crear sin IA, editar, imagen)
+    Route::get('/articles/create', [ArticleAdminController::class, 'create'])->name('admin.articles.create');
+    Route::post('/articles', [ArticleAdminController::class, 'store'])->name('admin.articles.store');
     Route::get('/articles', [ArticleAdminController::class, 'index'])->name('admin.articles.index');
+    Route::get('/articles/{article}/edit', [ArticleAdminController::class, 'edit'])->name('admin.articles.edit');
+    Route::put('/articles/{article}', [ArticleAdminController::class, 'update'])->name('admin.articles.update');
     Route::get('/articles/{article}/edit-image', [ArticleAdminController::class, 'editImage'])->name('admin.articles.edit-image');
     Route::post('/articles/{article}/update-image', [ArticleAdminController::class, 'updateImage'])->name('admin.articles.update-image');
     Route::get('/articles/{article}/extract-source', [ArticleAdminController::class, 'extractFromSource'])->name('admin.articles.extract-source');
@@ -179,7 +183,11 @@ if (config('app.allow_dev_routes')) {
         Route::post('/news/external/fetch', [ExternalNewsController::class, 'fetch'])->name('dev.news.external.fetch');
         Route::post('/news/external/import', [ExternalNewsController::class, 'import'])->name('dev.news.external.import');
 
+        Route::get('/articles/create', [ArticleDevController::class, 'create'])->name('dev.articles.create');
+        Route::post('/articles', [ArticleDevController::class, 'store'])->name('dev.articles.store');
         Route::get('/articles', [ArticleDevController::class, 'index'])->name('dev.articles.index');
+        Route::get('/articles/{article}/edit', [ArticleDevController::class, 'edit'])->name('dev.articles.edit');
+        Route::put('/articles/{article}', [ArticleDevController::class, 'update'])->name('dev.articles.update');
         Route::get('/articles/{article}/edit-image', [ArticleDevController::class, 'editImage'])->name('dev.articles.edit-image');
         Route::post('/articles/{article}/update-image', [ArticleDevController::class, 'updateImage'])->name('dev.articles.update-image');
         Route::get('/articles/{article}/extract-source', [ArticleDevController::class, 'extractFromSource'])->name('dev.articles.extract-source');

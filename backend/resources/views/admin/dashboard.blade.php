@@ -20,6 +20,9 @@
             </div>
             <div class="flex flex-wrap gap-3">
                 @if(isset($isDev) && $isDev)
+                    <a href="{{ url('/dev/articles/create') }}" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                        <i class="fas fa-pen-nib mr-2"></i>Nueva sin IA
+                    </a>
                     <a href="{{ url('/dev/gemini/enhanced') }}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                         <i class="fas fa-pen mr-2"></i>Crear Noticia (IA)
                     </a>
@@ -30,11 +33,23 @@
                         <i class="fas fa-image mr-2"></i>Gestionar Fotos
                     </a>
                 @else
+                        <a href="{{ url('/admin/articles/create') }}" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                        <i class="fas fa-pen-nib mr-2"></i>Nueva sin IA
+                    </a>
                     <a href="{{ route('admin.gemini.enhanced') }}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                         <i class="fas fa-pen mr-2"></i>Crear Noticia (IA)
                     </a>
+                    <a href="{{ route('admin.gemini.import') }}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                        <i class="fas fa-bolt mr-2"></i>Importación rápida
+                    </a>
+                    <a href="{{ route('admin.gemini.batch-import') }}" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                        <i class="fas fa-layer-group mr-2"></i>Batch
+                    </a>
+                    <a href="{{ route('admin.gemini.batch') }}" class="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700">
+                        <i class="fas fa-server mr-2"></i>Cola IA
+                    </a>
                     <a href="{{ route('admin.articles.index') }}" class="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600">
-                        <i class="fas fa-image mr-2"></i>Gestionar Fotos
+                        <i class="fas fa-newspaper mr-2"></i>Gestionar noticias
                     </a>
                 @endif
                 <a href="{{ rtrim(config('app.frontend_url'), '/') }}" target="_blank" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
@@ -82,6 +97,30 @@
             </div>
         </div>
 
+        @if(isset($isDev) && $isDev)
+            <a href="{{ url('/dev/articles/create') }}" class="block mb-6 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl shadow-lg p-5 hover:from-red-700 hover:to-red-800 transition">
+                <div class="flex items-center justify-between gap-4 flex-wrap">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide opacity-90">Sin Gemini</p>
+                        <p class="text-xl font-bold mt-1">Crear noticia manual</p>
+                        <p class="text-sm text-red-100 mt-1">Título, texto, imagen y fechas — todo a mano.</p>
+                    </div>
+                    <span class="inline-flex items-center gap-2 bg-white/20 px-4 py-2 rounded-lg text-sm font-medium">Abrir <i class="fas fa-arrow-right"></i></span>
+                </div>
+            </a>
+        @else
+            <a href="{{ url('/admin/articles/create') }}" class="block mb-6 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl shadow-lg p-5 hover:from-red-700 hover:to-red-800 transition">
+                <div class="flex items-center justify-between gap-4 flex-wrap">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide opacity-90">Sin Gemini</p>
+                        <p class="text-xl font-bold mt-1">Crear noticia manual (sin IA)</p>
+                        <p class="text-sm text-red-100 mt-1">Misma pantalla que antes: completa todos los campos tú mismo.</p>
+                    </div>
+                    <span class="inline-flex items-center gap-2 bg-white/20 px-4 py-2 rounded-lg text-sm font-medium">Abrir formulario <i class="fas fa-arrow-right"></i></span>
+                </div>
+            </a>
+        @endif
+
         <!-- Quick Actions + Recent -->
         <div class="grid md:grid-cols-2 gap-6">
             <!-- Acciones rápidas -->
@@ -93,6 +132,16 @@
                 </div>
                 <div class="p-6 space-y-3">
                     @if(isset($isDev) && $isDev)
+                        <a href="{{ url('/dev/articles/create') }}" class="flex items-center p-3 rounded-lg hover:bg-red-50 transition group">
+                            <span class="w-10 h-10 rounded-lg bg-red-100 text-red-600 flex items-center justify-center mr-3 group-hover:bg-red-200">
+                                <i class="fas fa-pen-nib"></i>
+                            </span>
+                            <div>
+                                <p class="font-medium text-gray-800">Nueva noticia manual (sin IA)</p>
+                                <p class="text-sm text-gray-500">Título, texto, imagen y fechas a mano</p>
+                            </div>
+                            <i class="fas fa-chevron-right text-gray-400 ml-auto"></i>
+                        </a>
                         <a href="{{ url('/dev/gemini/enhanced') }}" class="flex items-center p-3 rounded-lg hover:bg-blue-50 transition group">
                             <span class="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center mr-3 group-hover:bg-blue-200">
                                 <i class="fas fa-magic"></i>
@@ -134,6 +183,16 @@
                             <i class="fas fa-chevron-right text-gray-400 ml-auto"></i>
                         </a>
                     @else
+                        <a href="{{ url('/admin/articles/create') }}" class="flex items-center p-3 rounded-lg hover:bg-red-50 transition group">
+                            <span class="w-10 h-10 rounded-lg bg-red-100 text-red-600 flex items-center justify-center mr-3 group-hover:bg-red-200">
+                                <i class="fas fa-pen-nib"></i>
+                            </span>
+                            <div>
+                                <p class="font-medium text-gray-800">Nueva noticia manual (sin IA)</p>
+                                <p class="text-sm text-gray-500">Título, texto, imagen y fechas a mano</p>
+                            </div>
+                            <i class="fas fa-chevron-right text-gray-400 ml-auto"></i>
+                        </a>
                         <a href="{{ route('admin.gemini.enhanced') }}" class="flex items-center p-3 rounded-lg hover:bg-blue-50 transition group">
                             <span class="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center mr-3 group-hover:bg-blue-200">
                                 <i class="fas fa-magic"></i>
@@ -164,14 +223,24 @@
                             </div>
                             <i class="fas fa-chevron-right text-gray-400 ml-auto"></i>
                         </a>
+                        <a href="{{ route('admin.gemini.batch') }}" class="flex items-center p-3 rounded-lg hover:bg-slate-50 transition group">
+                            <span class="w-10 h-10 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center mr-3 group-hover:bg-slate-200">
+                                <i class="fas fa-server"></i>
+                            </span>
+                            <div>
+                                <p class="font-medium text-gray-800">Cola y procesamiento IA</p>
+                                <p class="text-sm text-gray-500">Lotes, cola gemini-transform, monitor y reintentos</p>
+                            </div>
+                            <i class="fas fa-chevron-right text-gray-400 ml-auto"></i>
+                        </a>
                     @endif
                     <a href="{{ isset($isDev) && $isDev ? url('/dev/articles') : route('admin.articles.index') }}" class="flex items-center p-3 rounded-lg hover:bg-amber-50 transition group">
                         <span class="w-10 h-10 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center mr-3 group-hover:bg-amber-200">
                             <i class="fas fa-image"></i>
                         </span>
                         <div>
-                            <p class="font-medium text-gray-800">Gestionar imágenes</p>
-                            <p class="text-sm text-gray-500">Cambiar fotos de artículos publicados</p>
+                            <p class="font-medium text-gray-800">Gestionar noticias</p>
+                                <p class="text-sm text-gray-500">Editar texto, imagen, fecha y estado</p>
                         </div>
                         <i class="fas fa-chevron-right text-gray-400 ml-auto"></i>
                     </a>
@@ -190,7 +259,7 @@
                 </div>
                 <div class="divide-y divide-gray-100">
                     @forelse($recent as $article)
-                        <a href="{{ isset($isDev) && $isDev ? route('dev.articles.edit-image', $article) : route('admin.articles.edit-image', $article) }}" class="flex items-center p-4 hover:bg-gray-50 transition">
+                        <a href="{{ isset($isDev) && $isDev ? route('dev.articles.edit', $article) : route('admin.articles.edit', $article) }}" class="flex items-center p-4 hover:bg-gray-50 transition" title="Editar noticia (texto, imagen, fechas)">
                             <span class="w-8 h-8 rounded-full flex items-center justify-center text-xs mr-3 {{ $article->is_external ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600' }}">
                                 {{ $article->is_external ? 'E' : 'L' }}
                             </span>
@@ -218,20 +287,34 @@
                 </h2>
                 <p class="text-sm text-gray-500 mt-1">Acceso directo a todas las pantallas vigentes del sistema</p>
             </div>
-            <div class="p-6 grid md:grid-cols-2 gap-6">
+            <div class="p-6 grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div>
                     <h3 class="text-sm font-semibold text-gray-700 uppercase mb-3">Backoffice</h3>
                     <div class="space-y-2 text-sm">
                         <a class="block text-blue-600 hover:underline" href="{{ isset($isDev) && $isDev ? url('/dev/dashboard') : url('/admin/dashboard') }}">Dashboard</a>
+                        <a class="block text-blue-600 hover:underline" href="{{ isset($isDev) && $isDev ? url('/dev/articles/create') : url('/admin/articles/create') }}">Nueva noticia manual (sin IA)</a>
                         <a class="block text-blue-600 hover:underline" href="{{ isset($isDev) && $isDev ? url('/dev/gemini/enhanced') : url('/admin/gemini/enhanced') }}">Crear noticia con IA (Enhanced)</a>
                         <a class="block text-blue-600 hover:underline" href="{{ isset($isDev) && $isDev ? url('/dev/gemini/import') : url('/admin/gemini/import') }}">Importación rápida</a>
                         <a class="block text-blue-600 hover:underline" href="{{ isset($isDev) && $isDev ? url('/dev/gemini/batch-import') : url('/admin/gemini/batch-import') }}">Importación batch</a>
+                        @unless(isset($isDev) && $isDev)
+                            <a class="block text-blue-600 hover:underline" href="{{ url('/admin/gemini/batch') }}">Cola y procesamiento IA (batch/cola)</a>
+                        @endunless
                         @if(isset($isDev) && $isDev)
                             <a class="block text-blue-600 hover:underline" href="{{ url('/dev/news/external') }}">Traer noticias externas</a>
                         @endif
-                        <a class="block text-blue-600 hover:underline" href="{{ isset($isDev) && $isDev ? url('/dev/articles') : url('/admin/articles') }}">Gestión de artículos e imágenes</a>
+                        <a class="block text-blue-600 hover:underline" href="{{ isset($isDev) && $isDev ? url('/dev/articles') : url('/admin/articles') }}">Gestionar noticias (texto, imagen, fechas)</a>
                     </div>
                 </div>
+                @unless(isset($isDev) && $isDev)
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-700 uppercase mb-3">Motor IA (sistema)</h3>
+                        <div class="space-y-2 text-sm">
+                            <a class="block text-slate-600 hover:underline" href="{{ url('/admin/gemini/health') }}" target="_blank" rel="noopener">Estado del servicio Gemini (JSON)</a>
+                            <a class="block text-slate-600 hover:underline" href="{{ url('/admin/gemini/stats') }}" target="_blank" rel="noopener">Estadísticas Gemini (JSON)</a>
+                            <p class="text-xs text-gray-500 pt-1">Requieren sesión iniciada; si el navegador pide descarga, ya estás autenticado.</p>
+                        </div>
+                    </div>
+                @endunless
                 <div>
                     <h3 class="text-sm font-semibold text-gray-700 uppercase mb-3">Sitio público / API</h3>
                     <div class="space-y-2 text-sm">
@@ -245,9 +328,15 @@
         </div>
 
         <!-- Footer -->
-        <p class="text-center text-gray-400 text-sm mt-8">
-            {{ now()->format('d/m/Y H:i') }} · Diario Zona Sur
-        </p>
+        <div class="text-center text-gray-400 text-sm mt-8 space-y-2">
+            <p>{{ now()->format('d/m/Y H:i') }} · Diario Zona Sur</p>
+            @unless(isset($isDev) && $isDev)
+                <form method="POST" action="{{ route('logout') }}" class="inline">
+                    @csrf
+                    <button type="submit" class="text-red-600 hover:text-red-800 hover:underline">Cerrar sesión</button>
+                </form>
+            @endunless
+        </div>
     </div>
 </body>
 </html>
