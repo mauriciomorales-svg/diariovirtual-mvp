@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Jobs\TransformNewsJob;
 use App\Services\GeminiService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Validator;
 
 class GeminiController extends Controller
@@ -16,7 +18,6 @@ class GeminiController extends Controller
     public function __construct(GeminiService $geminiService)
     {
         $this->geminiService = $geminiService;
-        $this->middleware('auth');
     }
 
     /**
@@ -179,26 +180,29 @@ class GeminiController extends Controller
     public function healthCheck()
     {
         try {
-            $isHealthy = $this->geminiService->healthCheck();
-            
+            $health = $this->geminiService->healthCheck();
+            $ok = (bool) ($health['available'] ?? false);
+
             return response()->json([
                 'success' => true,
-                'healthy' => $isHealthy,
-                'message' => $isHealthy ? 'Gemini service is healthy' : 'Gemini service is down',
-                'timestamp' => now()->toISOString()
+                'healthy' => $ok,
+                'message' => $ok
+                    ? 'Gemini service is healthy'
+                    : ($health['error'] ?? 'Gemini service is down'),
+                'details' => $health,
+                'timestamp' => now()->toIso8601String(),
             ]);
-
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Gemini health check failed', [
                 'error' => $e->getMessage(),
-                'user_id' => auth()->id()
+                'user_id' => auth()->check() ? auth()->id() : null,
             ]);
 
             return response()->json([
                 'success' => false,
                 'healthy' => false,
                 'error' => $e->getMessage(),
-                'timestamp' => now()->toISOString()
+                'timestamp' => now()->toIso8601String(),
             ], 500);
         }
     }
@@ -209,30 +213,95 @@ class GeminiController extends Controller
     public function getStats()
     {
         try {
+            // No llamar a healthCheck() aquí: en paralelo con /health duplica trabajo y si algo falla
+            // (DB, caché, red) el panel entero rompe. Las cuentas son solo lectura a BD.
+            $geminiProcessed = $this->safeCountGeminiMetadata();
+
+            $totalArticles = $this->safeCount(fn () => \App\Models\Article::whereNotNull('metadata')->count());
+            $recentArticles = $this->safeCount(fn () => \App\Models\Article::where('published_at', '>=', now()->subDays(7))->count());
+
+            $queuePending = 0;
+            try {
+                $queuePending = Queue::size('gemini-transform');
+            } catch (\Throwable $e) {
+                Log::debug('Queue size not available', ['error' => $e->getMessage()]);
+            }
+
             $stats = [
-                'total_articles' => \App\Models\Article::whereNotNull('metadata')->count(),
-                'gemini_processed' => \App\Models\Article::where('metadata', 'like', '%gemini_processed%')->count(),
-                'recent_articles' => \App\Models\Article::where('published_at', '>=', now()->subDays(7))->count(),
-                'queue_pending' => \Illuminate\Support\Facades\Queue::size('gemini-transform'),
-                'service_healthy' => $this->geminiService->healthCheck(),
+                'total_articles' => $totalArticles,
+                'gemini_processed' => $geminiProcessed,
+                'recent_articles' => $recentArticles,
+                'queue_pending' => $queuePending,
+                'service_healthy' => ! empty(config('services.gemini.api_key')),
             ];
 
             return response()->json([
                 'success' => true,
                 'stats' => $stats,
-                'timestamp' => now()->toISOString()
+                'timestamp' => now()->toIso8601String(),
             ]);
-
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Failed to get Gemini stats', [
                 'error' => $e->getMessage(),
-                'user_id' => auth()->id()
+                'user_id' => auth()->check() ? auth()->id() : null,
             ]);
 
             return response()->json([
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * @param  callable(): int  $fn
+     */
+    private function safeCount(callable $fn): int
+    {
+        try {
+            return (int) $fn();
+        } catch (\Throwable $e) {
+            Log::warning('Gemini stats count failed', ['error' => $e->getMessage()]);
+
+            return 0;
+        }
+    }
+
+    private function safeCountGeminiMetadata(): int
+    {
+        try {
+            return $this->countArticlesWithGeminiMetadata();
+        } catch (\Throwable $e) {
+            Log::warning('Gemini metadata count failed', ['error' => $e->getMessage()]);
+
+            return 0;
+        }
+    }
+
+    /**
+     * LIKE sobre JSON falla en PostgreSQL; usamos cast seguro.
+     */
+    private function countArticlesWithGeminiMetadata(): int
+    {
+        $driver = DB::connection()->getDriverName();
+
+        if ($driver === 'pgsql') {
+            try {
+                return (int) DB::table('articles')
+                    ->whereNotNull('metadata')
+                    ->whereRaw("metadata::text LIKE ?", ['%gemini_processed%'])
+                    ->count();
+            } catch (\Throwable $e) {
+                Log::warning('pgsql gemini metadata count fallback', ['error' => $e->getMessage()]);
+
+                return (int) DB::table('articles')->whereNotNull('metadata')->count();
+            }
+        }
+
+        try {
+            return \App\Models\Article::where('metadata', 'like', '%gemini_processed%')->count();
+        } catch (\Throwable $e) {
+            return \App\Models\Article::whereNotNull('metadata')->count();
         }
     }
 }

@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Diario Malleco</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Dashboard - Diario Zona Sur</title>
+    @vite(['resources/css/app.css'])
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -16,7 +16,7 @@
                     <i class="fas fa-tachometer-alt text-red-600 mr-2"></i>
                     Panel de Administración
                 </h1>
-                <p class="text-gray-500 mt-1">El Diario de Malleco</p>
+                <p class="text-gray-500 mt-1">Diario Zona Sur</p>
             </div>
             <div class="flex flex-wrap gap-3">
                 @if(isset($isDev) && $isDev)
@@ -37,7 +37,7 @@
                         <i class="fas fa-image mr-2"></i>Gestionar Fotos
                     </a>
                 @endif
-                <a href="http://localhost:3000" target="_blank" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
+                <a href="{{ rtrim(config('app.frontend_url'), '/') }}" target="_blank" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
                     <i class="fas fa-external-link-alt mr-2"></i>Ver Diario
                 </a>
             </div>
@@ -195,7 +195,7 @@
                                 {{ $article->is_external ? 'E' : 'L' }}
                             </span>
                             <div class="flex-1 min-w-0">
-                                <p class="font-medium text-gray-800 truncate">{{ Str::limit($article->title, 50) }}</p>
+                                <p class="font-medium text-gray-800 truncate">{{ \Illuminate\Support\Str::limit($article->title, 50) }}</p>
                                 <p class="text-xs text-gray-500">{{ $article->created_at->format('d/m/Y H:i') }}</p>
                             </div>
                             <i class="fas fa-chevron-right text-gray-400 text-sm"></i>
@@ -210,9 +210,43 @@
             </div>
         </div>
 
+        <!-- Mapa de pantallas actuales -->
+        <div class="mt-6 bg-white rounded-xl shadow overflow-hidden">
+            <div class="px-6 py-4 bg-gray-50 border-b">
+                <h2 class="font-bold text-gray-800">
+                    <i class="fas fa-sitemap text-sky-600 mr-2"></i>Mapa de pantallas actuales
+                </h2>
+                <p class="text-sm text-gray-500 mt-1">Acceso directo a todas las pantallas vigentes del sistema</p>
+            </div>
+            <div class="p-6 grid md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-700 uppercase mb-3">Backoffice</h3>
+                    <div class="space-y-2 text-sm">
+                        <a class="block text-blue-600 hover:underline" href="{{ isset($isDev) && $isDev ? url('/dev/dashboard') : url('/admin/dashboard') }}">Dashboard</a>
+                        <a class="block text-blue-600 hover:underline" href="{{ isset($isDev) && $isDev ? url('/dev/gemini/enhanced') : url('/admin/gemini/enhanced') }}">Crear noticia con IA (Enhanced)</a>
+                        <a class="block text-blue-600 hover:underline" href="{{ isset($isDev) && $isDev ? url('/dev/gemini/import') : url('/admin/gemini/import') }}">Importación rápida</a>
+                        <a class="block text-blue-600 hover:underline" href="{{ isset($isDev) && $isDev ? url('/dev/gemini/batch-import') : url('/admin/gemini/batch-import') }}">Importación batch</a>
+                        @if(isset($isDev) && $isDev)
+                            <a class="block text-blue-600 hover:underline" href="{{ url('/dev/news/external') }}">Traer noticias externas</a>
+                        @endif
+                        <a class="block text-blue-600 hover:underline" href="{{ isset($isDev) && $isDev ? url('/dev/articles') : url('/admin/articles') }}">Gestión de artículos e imágenes</a>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-700 uppercase mb-3">Sitio público / API</h3>
+                    <div class="space-y-2 text-sm">
+                        <a class="block text-blue-600 hover:underline" target="_blank" href="{{ rtrim(config('app.frontend_url'), '/') }}">Portada del diario (Next.js)</a>
+                        <a class="block text-blue-600 hover:underline" target="_blank" href="{{ url('/api/batch-articles') }}">API batch de artículos</a>
+                        <a class="block text-blue-600 hover:underline" target="_blank" href="{{ url('/api/v1/articles') }}">API v1 artículos</a>
+                        <a class="block text-blue-600 hover:underline" target="_blank" href="{{ url('/test-api') }}">Health API backend</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Footer -->
         <p class="text-center text-gray-400 text-sm mt-8">
-            {{ now()->format('d/m/Y H:i') }} · El Diario de Malleco
+            {{ now()->format('d/m/Y H:i') }} · Diario Zona Sur
         </p>
     </div>
 </body>

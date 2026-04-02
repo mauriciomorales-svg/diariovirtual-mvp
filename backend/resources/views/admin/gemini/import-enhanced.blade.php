@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Importación Rápida - Diario Malleco</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    @vite(['resources/css/app.css'])
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         @keyframes pulse-border {
@@ -305,27 +306,45 @@
             e.preventDefault();
             
             const formData = new FormData(this);
-            const data = Object.fromEntries(formData);
-            
-            // Add advanced settings
-            data.temperature = document.getElementById('temperature').value;
-            data.maxLength = document.getElementById('maxLength').value;
-            data.localStyle = document.getElementById('localStyle').value;
-            data.autoPublish = document.getElementById('autoPublish').checked;
+            const raw = Object.fromEntries(formData);
+            const data = {
+                title: raw.title,
+                content: raw.content,
+                source_name: raw.sourceName,
+                source_url: raw.sourceUrl,
+                processing_mode: raw.processingMode,
+                temperature: parseFloat(document.getElementById('temperature').value),
+                maxLength: document.getElementById('maxLength').value,
+                localStyle: document.getElementById('localStyle').value,
+                autoPublish: document.getElementById('autoPublish').checked,
+            };
             
             showLoading('Procesando con IA...', true);
             
             try {
-                const response = await fetch('/admin/gemini/process', {
+                const response = await fetch('{{ route('admin.gemini.enhanced.process') }}', {
                     method: 'POST',
+                    credentials: 'same-origin',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                        'X-Requested-With': 'XMLHttpRequest',
                     },
                     body: JSON.stringify(data)
                 });
                 
-                const result = await response.json();
+                const result = await response.json().catch(() => ({}));
+                
+                if (!response.ok) {
+                    if (result.errors) {
+                        const first = Object.values(result.errors).flat()[0];
+                        showError(first || 'Error de validación');
+                    } else {
+                        showError(result.error || result.message || ('Error ' + response.status));
+                    }
+                    return;
+                }
                 
                 if (result.success) {
                     if (result.mode === 'preview') {
@@ -492,6 +511,26 @@
             document.getElementById('wordCount').textContent = sample.content.trim().split(/\s+/).filter(word => word.length > 0).length;
         }
 
+        async function fetchAdminGeminiJson(url) {
+            const response = await fetch(url, {
+                credentials: 'same-origin',
+                redirect: 'manual',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+            });
+            if (response.status === 302 || response.status === 301 || response.type === 'opaqueredirect') {
+                throw new Error('Sesión caducada o no autenticado. Recarga la página e inicia sesión de nuevo.');
+            }
+            const ct = response.headers.get('content-type') || '';
+            if (!ct.includes('application/json')) {
+                throw new Error('El servidor devolvió HTML en lugar de JSON (error ' + response.status + '). Revisa storage/logs en el servidor.');
+            }
+            return response.json();
+        }
+
         // Enhanced health check
         async function checkHealth() {
             const healthDiv = document.getElementById('healthStatus');
@@ -504,8 +543,7 @@
             messageSpan.textContent = 'Verificando estado del servicio...';
             
             try {
-                const response = await fetch('/admin/gemini/health');
-                const result = await response.json();
+                const result = await fetchAdminGeminiJson('{{ route('admin.gemini.health') }}');
                 
                 if (result.success) {
                     healthDiv.className = result.healthy 
@@ -532,8 +570,7 @@
         // Enhanced stats
         async function getStats() {
             try {
-                const response = await fetch('/admin/gemini/stats');
-                const result = await response.json();
+                const result = await fetchAdminGeminiJson('{{ route('admin.gemini.stats') }}');
                 
                 if (result.success) {
                     const stats = result.stats;

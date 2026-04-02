@@ -1,6 +1,10 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Http\Request;
+use App\Models\User;
 use App\Http\Controllers\Admin\GeminiController;
 use App\Http\Controllers\Admin\GeminiBatchController;
 use App\Http\Controllers\Admin\GeminiEnhancedController;
@@ -17,9 +21,47 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// Autenticación (requerida para que el middleware `auth` redirija a login y no falle con 500)
+Route::middleware('guest')->group(function () {
+    Route::get('/login', function () {
+        return view('auth.login');
+    })->name('login');
+
+    Route::post('/login', function (Request $request) {
+        $request->validate([
+            'login' => ['required', 'string'],
+            'password' => ['required'],
+        ]);
+
+        $user = User::where('username', $request->input('login'))->first();
+        if (! $user && filter_var($request->input('login'), FILTER_VALIDATE_EMAIL)) {
+            $user = User::where('email', $request->input('login'))->first();
+        }
+
+        if (! $user || ! Hash::check($request->input('password'), $user->password)) {
+            return back()->withErrors([
+                'login' => 'Usuario o contraseña incorrectos.',
+            ])->onlyInput('login');
+        }
+
+        Auth::login($user, $request->boolean('remember'));
+        $request->session()->regenerate();
+
+        return redirect()->intended('/admin/dashboard');
+    });
+});
+
+Route::post('/logout', function (Request $request) {
+    Auth::logout();
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
+    return redirect('/');
+})->middleware('auth')->name('logout');
+
 // API de artículos para el frontend
 Route::get('/api/batch-articles', function () {
-    $placeholder = 'https://via.placeholder.com/1200x630/333333/ffffff?text=Diario+Malleco';
+    $placeholder = 'https://via.placeholder.com/1200x630/333333/ffffff?text=Diario+Zona+Sur';
     $articles = \App\Models\Article::where('status', 'published')
         ->orderBy('created_at', 'desc')
         ->limit(30)
@@ -113,37 +155,36 @@ Route::middleware(['auth'])->prefix('admin')->group(function () {
     Route::get('/articles/{article}/extract-source', [ArticleAdminController::class, 'extractFromSource'])->name('admin.articles.extract-source');
 });
 
-// Development routes - NO AUTH required for local testing
-Route::middleware(['web'])->prefix('dev')->group(function () {
-    Route::get('/', [DevDashboardController::class, 'index'])->name('dev.dashboard');
-    Route::get('/dashboard', [DevDashboardController::class, 'index']);
+// Rutas /dev solo si ALLOW_DEV_ROUTES=true (nunca en producción pública)
+if (config('app.allow_dev_routes')) {
+    Route::middleware(['web'])->prefix('dev')->group(function () {
+        Route::get('/', [DevDashboardController::class, 'index'])->name('dev.dashboard');
+        Route::get('/dashboard', [DevDashboardController::class, 'index']);
 
-    // Gemini routes accessible without auth for local development
-    Route::get('/gemini/import', [GeminiDevController::class, 'showImportForm'])->name('dev.gemini.import');
-    Route::post('/gemini/process', [GeminiDevController::class, 'processImport'])->name('dev.gemini.process');
-    Route::post('/gemini/publish', [GeminiDevController::class, 'publishTransformed'])->name('dev.gemini.publish');
-    Route::get('/gemini/health', [GeminiDevController::class, 'healthCheck'])->name('dev.gemini.health');
-    Route::get('/gemini/stats', [GeminiDevController::class, 'getStats'])->name('dev.gemini.stats');
-    Route::get('/gemini/diagnostics', [GeminiDevController::class, 'getDiagnostics'])->name('dev.gemini.diagnostics');
+        Route::get('/gemini/import', [GeminiDevController::class, 'showImportForm'])->name('dev.gemini.import');
+        Route::post('/gemini/process', [GeminiDevController::class, 'processImport'])->name('dev.gemini.process');
+        Route::post('/gemini/publish', [GeminiDevController::class, 'publishTransformed'])->name('dev.gemini.publish');
+        Route::get('/gemini/health', [GeminiDevController::class, 'healthCheck'])->name('dev.gemini.health');
+        Route::get('/gemini/stats', [GeminiDevController::class, 'getStats'])->name('dev.gemini.stats');
+        Route::get('/gemini/diagnostics', [GeminiDevController::class, 'getDiagnostics'])->name('dev.gemini.diagnostics');
 
-    // Enhanced processing - USANDO GeminiDevController
-    Route::get('/gemini/enhanced', [GeminiDevController::class, 'showEnhancedImportForm'])->name('dev.gemini.enhanced');
+        Route::get('/gemini/enhanced', [GeminiDevController::class, 'showEnhancedImportForm'])->name('dev.gemini.enhanced');
 
-    // Batch processing - Development (SIN CSRF PARA TESTING)
-    Route::get('/gemini/batch-import', [GeminiBatchImportController::class, 'showBatchImportForm'])->name('dev.gemini.batch-import');
-    Route::post('/gemini/batch-process', [GeminiBatchImportController::class, 'processBatchImport'])->name('dev.gemini.batch-process')->middleware('no-csrf');
+        Route::get('/gemini/batch-import', [GeminiBatchImportController::class, 'showBatchImportForm'])->name('dev.gemini.batch-import');
+        Route::post('/gemini/batch-process', [GeminiBatchImportController::class, 'processBatchImport'])
+            ->name('dev.gemini.batch-process')
+            ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class]);
 
-    // Traer noticias externas (preview + confirmación, máx 30)
-    Route::get('/news/external', [ExternalNewsController::class, 'showForm'])->name('dev.news.external');
-    Route::post('/news/external/fetch', [ExternalNewsController::class, 'fetch'])->name('dev.news.external.fetch');
-    Route::post('/news/external/import', [ExternalNewsController::class, 'import'])->name('dev.news.external.import');
+        Route::get('/news/external', [ExternalNewsController::class, 'showForm'])->name('dev.news.external');
+        Route::post('/news/external/fetch', [ExternalNewsController::class, 'fetch'])->name('dev.news.external.fetch');
+        Route::post('/news/external/import', [ExternalNewsController::class, 'import'])->name('dev.news.external.import');
 
-    // Gestión de artículos - Development (sin auth)
-    Route::get('/articles', [ArticleDevController::class, 'index'])->name('dev.articles.index');
-    Route::get('/articles/{article}/edit-image', [ArticleDevController::class, 'editImage'])->name('dev.articles.edit-image');
-    Route::post('/articles/{article}/update-image', [ArticleDevController::class, 'updateImage'])->name('dev.articles.update-image');
-    Route::get('/articles/{article}/extract-source', [ArticleDevController::class, 'extractFromSource'])->name('dev.articles.extract-source');
-});
+        Route::get('/articles', [ArticleDevController::class, 'index'])->name('dev.articles.index');
+        Route::get('/articles/{article}/edit-image', [ArticleDevController::class, 'editImage'])->name('dev.articles.edit-image');
+        Route::post('/articles/{article}/update-image', [ArticleDevController::class, 'updateImage'])->name('dev.articles.update-image');
+        Route::get('/articles/{article}/extract-source', [ArticleDevController::class, 'extractFromSource'])->name('dev.articles.extract-source');
+    });
+}
 
 // Placeholder dinámico - imagen única por slug (picsum.photos vía proxy)
 Route::get('/placeholder-img', function (\Illuminate\Http\Request $request) {

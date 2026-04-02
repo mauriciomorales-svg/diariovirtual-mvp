@@ -35,10 +35,10 @@ class GeminiServiceTest extends TestCase
     {
         // This test will fail without proper API key setup
         // but should not crash the application
-        $isHealthy = $this->geminiService->healthCheck();
-        
-        // Should return boolean, not throw exception
-        $this->assertIsBool($isHealthy);
+        $health = $this->geminiService->healthCheck();
+
+        $this->assertIsArray($health);
+        $this->assertArrayHasKey('available', $health);
     }
 
     /**
