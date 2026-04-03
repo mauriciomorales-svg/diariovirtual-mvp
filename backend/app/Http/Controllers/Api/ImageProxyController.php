@@ -10,6 +10,18 @@ use Intervention\Image\Laravel\Facades\Image;
 
 class ImageProxyController extends Controller
 {
+    private function placeholderSvg(): \Illuminate\Http\Response
+    {
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">'
+            . '<rect width="1200" height="630" fill="#1a365d"/>'
+            . '<text x="600" y="315" font-family="Arial,sans-serif" font-size="48" fill="#ffffff" '
+            . 'text-anchor="middle" dominant-baseline="middle">Diario Zona Sur</text>'
+            . '</svg>';
+        return response($svg, 200)
+            ->header('Content-Type', 'image/svg+xml')
+            ->header('Cache-Control', 'public, max-age=3600');
+    }
+
     public function proxy(Request $request, string $url)
     {
         $base64 = str_replace(['-', '_'], ['+', '/'], $url);
@@ -21,28 +33,35 @@ class ImageProxyController extends Controller
         $decodedUrl = urldecode($decoded);
         $cacheKey = 'image_proxy_' . md5($decodedUrl);
 
-        return Cache::remember($cacheKey, 86400, function () use ($decodedUrl) {
-            $response = Http::timeout(10)
-                ->withHeaders(['User-Agent' => 'Mozilla/5.0 (compatible; DiarioVirtual/1.0)'])
-                ->get($decodedUrl);
-
-            if (!$response->successful()) {
-                abort(404);
-            }
-
-            $body = $response->body();
-            $contentType = $response->header('Content-Type', 'image/jpeg');
-
+        return Cache::remember($cacheKey, 3600, function () use ($decodedUrl) {
             try {
-                $img = Image::read($body)
-                    ->resize(1200, 630, function ($constraint) {
-                        $constraint->aspectRatio();
-                        $constraint->upsize();
-                    })
-                    ->toWebp(80);
-                return response($img, 200)->header('Content-Type', 'image/webp');
+                $response = Http::timeout(10)
+                    ->withHeaders(['User-Agent' => 'Mozilla/5.0 (compatible; DiarioVirtual/1.0)'])
+                    ->get($decodedUrl);
+
+                if (!$response->successful()) {
+                    return $this->placeholderSvg();
+                }
+
+                $body = $response->body();
+                if (empty($body)) {
+                    return $this->placeholderSvg();
+                }
+
+                $contentType = $response->header('Content-Type', 'image/jpeg');
+
+                try {
+                    $img = Image::read($body)->cover(1200, 630)->toWebp(80);
+                    return response($img, 200)
+                        ->header('Content-Type', 'image/webp')
+                        ->header('Cache-Control', 'public, max-age=3600');
+                } catch (\Throwable $e) {
+                    return response($body, 200)
+                        ->header('Content-Type', $contentType)
+                        ->header('Cache-Control', 'public, max-age=3600');
+                }
             } catch (\Throwable $e) {
-                return response($body, 200)->header('Content-Type', $contentType);
+                return $this->placeholderSvg();
             }
         });
     }

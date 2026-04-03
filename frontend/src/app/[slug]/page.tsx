@@ -94,28 +94,30 @@ function buildMetadata(article: Article, pathForCanonical: string) {
   return metadataConfig;
 }
 
-export async function generateMetadata({ params }: { params: { slug: string } }) {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   try {
-    if (RESERVED_SLUGS.has(params.slug)) {
+    const { slug } = await params;
+    if (RESERVED_SLUGS.has(slug)) {
       notFound();
     }
-    const article = await getArticle(params.slug);
+    const article = await getArticle(slug);
     if (!article) {
       notFound();
     }
-    const path = `/${encodeURIComponent(params.slug)}`;
+    const path = `/${encodeURIComponent(slug)}`;
     return buildMetadata(article, path);
   } catch {
     return { title: 'Diario Zona Sur' };
   }
 }
 
-export default async function ArticlePage({ params }: { params: { slug: string } }) {
+export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
   try {
-    if (RESERVED_SLUGS.has(params.slug)) {
+    const { slug } = await params;
+    if (RESERVED_SLUGS.has(slug)) {
       notFound();
     }
-    const article = await getArticle(params.slug);
+    const article = await getArticle(slug);
     if (!article) {
       notFound();
     }

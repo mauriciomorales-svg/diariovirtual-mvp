@@ -80,16 +80,18 @@ function buildMetadata(article: Article, pathForCanonical: string) {
   return metadataConfig;
 }
 
-export async function generateMetadata({ params }: { params: { id: string } }) {
-  const article = await getArticleById(params.id);
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const article = await getArticleById(id);
   if (!article) {
     notFound();
   }
-  return buildMetadata(article, `/news/${encodeURIComponent(params.id)}`);
+  return buildMetadata(article, `/news/${encodeURIComponent(id)}`);
 }
 
-export default async function NewsByIdPage({ params }: { params: { id: string } }) {
-  const article = await getArticleById(params.id);
+export default async function NewsByIdPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const article = await getArticleById(id);
   if (!article) {
     notFound();
   }
