@@ -10,4 +10,5 @@ export interface Article {
   status: string;
   published_at: string;
   content?: string;
+  metadata?: string | Record<string, unknown> | null;
 }
