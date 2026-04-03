@@ -8,6 +8,7 @@ use App\Services\GeminiService;
 
 Route::middleware('api')->group(function () {
     Route::get('articles', [ArticleController::class, 'index']);
+    Route::get('article/by-id/{article}', [ArticleController::class, 'showById']);
     Route::get('articles/{slug}', [ArticleController::class, 'show']);
     Route::get('image-proxy/{url}', [ImageProxyController::class, 'proxy']);
     Route::post('batch-parse', [GeminiBatchImportController::class, 'parseBatch']);

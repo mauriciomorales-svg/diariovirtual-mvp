@@ -35,4 +35,18 @@ class ArticleController extends Controller
 
         return response()->json($article);
     }
+
+    /**
+     * Detalle por UUID (cuando el slug en BD es inválido, ej. un dominio pegado por error).
+     */
+    public function showById(Article $article)
+    {
+        $found = Article::published()->whereKey($article->getKey())->first();
+
+        if (! $found) {
+            abort(404);
+        }
+
+        return response()->json($found);
+    }
 }
