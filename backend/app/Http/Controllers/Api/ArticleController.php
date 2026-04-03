@@ -37,16 +37,16 @@ class ArticleController extends Controller
     }
 
     /**
-     * Detalle por UUID (cuando el slug en BD es inválido, ej. un dominio pegado por error).
+     * Detalle por UUID (ruta /news/{id} en el frontend cuando el slug no es válido en URL).
      */
-    public function showById(Article $article)
+    public function showById(string $id)
     {
-        $found = Article::published()->whereKey($article->getKey())->first();
+        $article = Article::published()->where('id', $id)->first();
 
-        if (! $found) {
+        if (! $article) {
             abort(404);
         }
 
-        return response()->json($found);
+        return response()->json($article);
     }
 }
