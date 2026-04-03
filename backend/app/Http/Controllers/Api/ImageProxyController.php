@@ -51,14 +51,15 @@ class ImageProxyController extends Controller
                 $contentType = $response->header('Content-Type', 'image/jpeg');
 
                 try {
-                    $img = Image::read($body)->cover(1200, 630)->toWebp(80);
+                    // scaleDown: reduce si es muy grande pero NO recorta — mantiene proporción original
+                    $img = Image::read($body)->scaleDown(1200, 2400)->toWebp(82);
                     return response($img, 200)
                         ->header('Content-Type', 'image/webp')
-                        ->header('Cache-Control', 'public, max-age=3600');
+                        ->header('Cache-Control', 'public, max-age=86400');
                 } catch (\Throwable $e) {
                     return response($body, 200)
                         ->header('Content-Type', $contentType)
-                        ->header('Cache-Control', 'public, max-age=3600');
+                        ->header('Cache-Control', 'public, max-age=86400');
                 }
             } catch (\Throwable $e) {
                 return $this->placeholderSvg();
