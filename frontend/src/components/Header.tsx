@@ -3,7 +3,9 @@
 import Link from 'next/link';
 import { useState } from 'react';
 
-const BACKEND = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+const ADMIN_URL = process.env.NEXT_PUBLIC_API_URL
+  ? process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '')
+  : 'https://api.diariozonasur.cl';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -17,14 +19,14 @@ export default function Header() {
 
   const navItems = [
     { name: 'Inicio', href: '/' },
-    { name: 'Angol', href: '/categoria/angol' },
-    { name: 'Victoria', href: '/categoria/victoria' },
-    { name: 'Collipulli', href: '/categoria/collipulli' },
-    { name: 'La Araucanía', href: '/categoria/araucania' },
-    { name: 'Nacional', href: '/categoria/nacional' },
-    { name: 'Admin', href: `${BACKEND}/dev/dashboard`, external: true },
-    { name: 'Crear Noticia', href: `${BACKEND}/dev/gemini/enhanced`, external: true },
-    { name: 'Traer Externas', href: `${BACKEND}/dev/news/external`, external: true },
+    { name: 'Angol', href: '/?categoria=angol' },
+    { name: 'Victoria', href: '/?categoria=victoria' },
+    { name: 'Collipulli', href: '/?categoria=collipulli' },
+    { name: 'La Araucanía', href: '/?categoria=araucania' },
+    { name: 'Nacional', href: '/?categoria=nacional' },
+    { name: 'Admin', href: `${ADMIN_URL}/admin/dashboard`, external: true },
+    { name: 'Crear Noticia', href: `${ADMIN_URL}/admin/articles/create`, external: true },
+    { name: 'Traer Externas', href: `${ADMIN_URL}/admin/gemini/enhanced`, external: true },
   ];
 
   return (
@@ -46,27 +48,27 @@ export default function Header() {
         <div className="flex flex-col md:flex-row justify-between items-center">
           {/* Logo */}
           <Link href="/" className="text-center md:text-left mb-4 md:mb-0">
-            <h1 className="text-4xl md:text-5xl font-black text-red-700 tracking-tight">
-              🚨 EL DIARIO
+            <h1 className="text-3xl md:text-4xl font-black text-red-700 tracking-tight leading-tight">
+              Diario Zona Sur
             </h1>
-            <p className="text-lg text-gray-600 font-semibold tracking-widest uppercase">
-              de Malleco
+            <p className="text-sm md:text-base text-gray-600 font-medium mt-1">
+              Noticias · Araucanía y sur de Chile
             </p>
           </Link>
 
           {/* Search & Social */}
           <div className="flex flex-col items-center md:items-end space-y-3">
             <div className="flex space-x-4">
-              <a href="#" className="text-blue-600 hover:text-blue-800 text-2xl">
+              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 text-2xl">
                 <span>📘</span>
               </a>
-              <a href="#" className="text-sky-500 hover:text-sky-700 text-2xl">
+              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-sky-500 hover:text-sky-700 text-2xl">
                 <span>🐦</span>
               </a>
-              <a href="#" className="text-pink-600 hover:text-pink-800 text-2xl">
+              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-pink-600 hover:text-pink-800 text-2xl">
                 <span>📸</span>
               </a>
-              <a href="#" className="text-green-600 hover:text-green-800 text-2xl">
+              <a href="https://wa.me" target="_blank" rel="noopener noreferrer" className="text-green-600 hover:text-green-800 text-2xl">
                 <span>💬</span>
               </a>
             </div>
@@ -100,7 +102,7 @@ export default function Header() {
           <ul className={`${isMenuOpen ? 'block' : 'hidden'} md:flex md:space-x-1 py-0 md:py-0`}>
             {navItems.map((item) => (
               <li key={item.name}>
-                {item.external ? (
+                {'external' in item && item.external ? (
                   <a
                     href={item.href}
                     target="_blank"
