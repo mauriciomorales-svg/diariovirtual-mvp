@@ -1,10 +1,8 @@
-import { getArticle } from '@/lib/api';
+import { getArticleById } from '@/lib/api';
 import ArticleDetailView from '@/components/ArticleDetailView';
 import { getProxiedImageUrl } from '@/lib/image';
 import { notFound } from 'next/navigation';
 import type { Article } from '@/types/article';
-
-const RESERVED_SLUGS = new Set(['robots.txt', 'sitemap.xml', 'favicon.ico', 'sitemap_index.xml']);
 
 const SITE_ORIGIN = (process.env.NEXT_PUBLIC_SITE_URL || 'https://diariozonasur.cl').replace(
   /\/$/,
@@ -41,12 +39,11 @@ function buildMetadata(article: Article, pathForCanonical: string) {
   const imageUrl = absolutePublicUrl(imagePath);
   const metadata = normalizeMetadata(article.metadata);
   const originalUrl = article.external_url || (metadata.original_url as string | undefined);
-  const originalSource = (metadata.original_source as string | undefined) || 'Agencia de Noticias';
 
   const metadataConfig: Record<string, unknown> = {
     title: `${article.title} | Diario Zona Sur`,
     description: article.excerpt,
-    keywords: ['Zona Sur', 'Araucanía', 'Chile', 'noticias', 'Angol', 'Victoria', 'Collipulli', 'Malleco'],
+    keywords: ['Zona Sur', 'Araucanía', 'Chile', 'noticias'],
     authors: [{ name: 'Diario Zona Sur' }],
     openGraph: {
       title: article.title,
@@ -56,14 +53,7 @@ function buildMetadata(article: Article, pathForCanonical: string) {
       locale: 'es_CL',
       type: 'article',
       publishedTime: article.published_at,
-      images: [
-        {
-          url: imageUrl,
-          width: 1200,
-          height: 630,
-          alt: article.title,
-        },
-      ],
+      images: [{ url: imageUrl, width: 1200, height: 630, alt: article.title }],
     },
     twitter: {
       card: 'summary_large_image',
@@ -82,10 +72,6 @@ function buildMetadata(article: Article, pathForCanonical: string) {
 
   if (article.is_external && originalUrl) {
     (metadataConfig.alternates as { canonical: string }).canonical = originalUrl;
-    metadataConfig.other = {
-      'article:publisher': 'https://diariozonasur.cl',
-      'article:source': originalSource,
-    };
   } else {
     (metadataConfig.alternates as { canonical: string }).canonical =
       `${SITE_ORIGIN}${pathForCanonical}`;
@@ -94,33 +80,18 @@ function buildMetadata(article: Article, pathForCanonical: string) {
   return metadataConfig;
 }
 
-export async function generateMetadata({ params }: { params: { slug: string } }) {
-  try {
-    if (RESERVED_SLUGS.has(params.slug)) {
-      notFound();
-    }
-    const article = await getArticle(params.slug);
-    if (!article) {
-      notFound();
-    }
-    const path = `/${encodeURIComponent(params.slug)}`;
-    return buildMetadata(article, path);
-  } catch {
-    return { title: 'Diario Zona Sur' };
-  }
-}
-
-export default async function ArticlePage({ params }: { params: { slug: string } }) {
-  try {
-    if (RESERVED_SLUGS.has(params.slug)) {
-      notFound();
-    }
-    const article = await getArticle(params.slug);
-    if (!article) {
-      notFound();
-    }
-    return <ArticleDetailView article={article} />;
-  } catch {
+export async function generateMetadata({ params }: { params: { id: string } }) {
+  const article = await getArticleById(params.id);
+  if (!article) {
     notFound();
   }
+  return buildMetadata(article, `/news/${encodeURIComponent(params.id)}`);
+}
+
+export default async function NewsByIdPage({ params }: { params: { id: string } }) {
+  const article = await getArticleById(params.id);
+  if (!article) {
+    notFound();
+  }
+  return <ArticleDetailView article={article} />;
 }

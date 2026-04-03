@@ -28,7 +28,10 @@ const nextConfig: NextConfig = {
     ],
   },
   async rewrites() {
-    const backend = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+    // En local: define NEXT_PUBLIC_API_URL=http://127.0.0.1:8000 en .env.local
+    const backend =
+      process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ||
+      'https://api.diariozonasur.cl';
     return [
       {
         source: '/api/articles',
