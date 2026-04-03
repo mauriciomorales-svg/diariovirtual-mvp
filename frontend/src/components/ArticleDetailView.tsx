@@ -28,7 +28,22 @@ export default function ArticleDetailView({ article }: { article: Article }) {
     ? new Date(String(metadata.transformed_at)).toLocaleDateString('es-CL')
     : null;
 
-  const contentWithAds = injectAds(article.content || '');
+  const rawContent = article.content || '';
+
+  /**
+   * Si el contenido no tiene etiquetas HTML, es texto plano:
+   * convertimos doble-salto-de-línea → párrafos y salto simple → <br>.
+   */
+  function toHtml(text: string): string {
+    const hasHtml = /<[a-z][\s\S]*>/i.test(text);
+    if (hasHtml) return text;
+    return text
+      .split(/\n{2,}/)
+      .map((block) => `<p>${block.replace(/\n/g, '<br>')}</p>`)
+      .join('');
+  }
+
+  const contentWithAds = injectAds(toHtml(rawContent));
   const processedContent = contentWithAds.replace(
     '<div data-native-ad="true"></div>',
     '<div id="native-ad-placeholder"></div>'
@@ -91,12 +106,10 @@ export default function ArticleDetailView({ article }: { article: Article }) {
           </div>
         </div>
 
-        <div className="prose prose-lg max-w-none">
-          <div
-            dangerouslySetInnerHTML={{ __html: processedContent }}
-            className="text-gray-700 leading-relaxed"
-          />
-        </div>
+        <div
+          dangerouslySetInnerHTML={{ __html: processedContent }}
+          className="article-content"
+        />
 
         <AdInjector content={processedContent} />
 
