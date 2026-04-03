@@ -1,4 +1,6 @@
 import { getArticles } from '@/lib/api-simple';
+import { publicArticlePath } from '@/lib/articleUrl';
+import AdminImageEditLink from '@/components/AdminImageEditLink';
 import ArticleCard from '@/components/ArticleCard';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -48,31 +50,18 @@ export default async function HomePage() {
           {/* Error Message */}
           {error && (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-              <p className="font-bold">Error:</p>
-              <p>{error}</p>
-              <p className="text-sm mt-2">Verifica que el backend Laravel esté corriendo en {process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}</p>
+              <p className="font-bold">No pudimos cargar las noticias</p>
+              <p className="text-sm mt-1">Intenta de nuevo en unos minutos.</p>
             </div>
           )}
 
           {/* No Articles Message */}
           {articles.length === 0 && !error && (
             <div className="text-center py-12 bg-white rounded-lg shadow">
-              <p className="text-gray-500 text-lg">No hay noticias disponibles</p>
-              <p className="text-gray-400 mt-2">Crea noticias locales con IA o trae noticias de otros medios</p>
-              <div className="flex flex-wrap justify-center gap-3 mt-4">
-              <a 
-                href={`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/dev/gemini/enhanced`}
-                className="inline-flex items-center px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
-              >
-                📝 Crear Noticia (IA)
-              </a>
-              <a 
-                href={`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/dev/news/external`}
-                className="inline-flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
-              >
-                  📰 Traer Noticias Externas
-                </a>
-              </div>
+              <p className="text-gray-500 text-lg">No hay noticias publicadas por ahora</p>
+              <p className="text-gray-400 mt-2 max-w-md mx-auto">
+                Vuelve pronto: aquí verás las últimas noticias de la Zona Sur.
+              </p>
             </div>
           )}
 
@@ -106,6 +95,9 @@ export default async function HomePage() {
                         <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 text-sm font-bold uppercase">
                           Destacada
                         </div>
+                        <div className="absolute bottom-3 right-3">
+                          <AdminImageEditLink articleId={featuredArticle.id} />
+                        </div>
                       </div>
                       <div className="md:w-1/3 p-6 flex flex-col justify-center">
                         <span className="text-red-600 text-sm font-semibold uppercase tracking-wide mb-2">
@@ -122,7 +114,7 @@ export default async function HomePage() {
                             {new Date(featuredArticle.published_at).toLocaleDateString('es-CL')}
                           </span>
                           <a
-                            href={featuredArticle.is_external ? featuredArticle.external_url : `/${featuredArticle.slug}`}
+                            href={publicArticlePath(featuredArticle)}
                             target={featuredArticle.is_external ? '_blank' : undefined}
                             rel={featuredArticle.is_external ? 'noopener noreferrer' : undefined}
                             className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition font-medium"

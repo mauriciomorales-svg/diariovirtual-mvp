@@ -1,6 +1,6 @@
 import { Article } from '@/types/article';
 
-const BACKEND = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+const BACKEND = (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
 
 function normalizeArticle(a: Record<string, unknown>): Article {
   return {
@@ -9,7 +9,7 @@ function normalizeArticle(a: Record<string, unknown>): Article {
     slug: String(a.slug ?? ''),
     source_hash: String(a.source_hash ?? ''),
     excerpt: String(a.excerpt ?? ''),
-    image_url: String(a.image_url || 'https://via.placeholder.com/1200x630/333333/ffffff?text=Diario+Malleco'),
+    image_url: String(a.image_url || 'https://via.placeholder.com/1200x630/333333/ffffff?text=Diario+Zona+Sur'),
     is_external: Boolean(a.is_external),
     external_url: a.external_url ? String(a.external_url) : undefined,
     status: String(a.status ?? 'published'),
