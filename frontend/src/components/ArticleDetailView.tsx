@@ -92,14 +92,15 @@ export default function ArticleDetailView({ article }: { article: Article }) {
           </div>
         </header>
 
-        <div className="mb-8 relative inline-block w-full">
+        <div className="mb-8 relative w-full">
           <img
             src={getProxiedImageUrl(article.image_url, {
               title: article.title,
               slug: article.slug,
             })}
             alt={article.title}
-            className="w-full h-auto rounded-lg shadow-lg object-cover"
+            className="w-full h-auto rounded-lg shadow-lg"
+            style={{ display: 'block' }}
           />
           <div className="absolute bottom-3 right-3">
             <AdminImageEditLink articleId={String(article.id)} />
