@@ -70,26 +70,27 @@
                             <td class="px-4 py-3 text-sm text-gray-500">
                                 {{ $article->published_at?->format('d/m/Y H:i') ?? '—' }}
                             </td>
-                            <td class="px-4 py-3 text-right space-x-2 whitespace-nowrap">
-                                <a href="{{ route(request()->routeIs('dev.*') ? 'dev.articles.edit' : 'admin.articles.edit', $article) }}"
-                                   class="inline-flex items-center px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm">
-                                    <i class="fas fa-edit mr-1"></i> Editar
-                                </a>
-                                <a href="{{ route(request()->routeIs('dev.*') ? 'dev.articles.edit-image' : 'admin.articles.edit-image', $article) }}"
-                                   class="inline-flex items-center px-3 py-1.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 text-sm">
-                                    <i class="fas fa-image mr-1"></i> Foto
-                                </a>
-                                <form method="POST"
-                                      action="{{ route(request()->routeIs('dev.*') ? 'dev.articles.destroy' : 'admin.articles.destroy', $article) }}"
-                                      class="inline"
-                                      onsubmit="return confirm('¿Eliminar «{{ addslashes(Str::limit($article->title, 40)) }}»? Esta acción no se puede deshacer.')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit"
-                                            class="inline-flex items-center px-3 py-1.5 bg-gray-700 text-white rounded-lg hover:bg-gray-900 text-sm">
-                                        <i class="fas fa-trash mr-1"></i> Eliminar
-                                    </button>
-                                </form>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center justify-end gap-2 flex-wrap">
+                                    <a href="{{ route(request()->routeIs('dev.*') ? 'dev.articles.edit' : 'admin.articles.edit', $article) }}"
+                                       class="inline-flex items-center px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium">
+                                        <i class="fas fa-edit mr-1"></i> Editar
+                                    </a>
+                                    <a href="{{ route(request()->routeIs('dev.*') ? 'dev.articles.edit-image' : 'admin.articles.edit-image', $article) }}"
+                                       class="inline-flex items-center px-3 py-1.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 text-sm font-medium">
+                                        <i class="fas fa-image mr-1"></i> Foto
+                                    </a>
+                                    <form method="POST"
+                                          action="{{ route(request()->routeIs('dev.*') ? 'dev.articles.destroy' : 'admin.articles.destroy', $article) }}"
+                                          onsubmit="return confirm('¿Eliminar «{{ addslashes(Str::limit($article->title, 40)) }}»? Esta acción no se puede deshacer.')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit"
+                                                class="inline-flex items-center px-3 py-1.5 bg-red-800 text-white rounded-lg hover:bg-red-900 text-sm font-medium">
+                                            <i class="fas fa-trash mr-1"></i> Eliminar
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                         @endforeach
