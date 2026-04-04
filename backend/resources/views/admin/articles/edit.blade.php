@@ -53,10 +53,16 @@
 
                 <div>
                     <label for="slug" class="block text-sm font-medium text-gray-700 mb-1">Slug (URL)</label>
-                    <input type="text" name="slug" id="slug" required maxlength="255"
-                           value="{{ old('slug', $article->slug) }}"
-                           class="w-full px-4 py-2 border border-gray-300 rounded-lg font-mono text-sm focus:ring-2 focus:ring-red-500">
-                    <p class="text-xs text-gray-500 mt-1">Solo minúsculas, números y guiones — sin puntos. Cambiar el slug cambia la URL pública. Si el enlace público se ve raro, revisa que el slug no sea un dominio.</p>
+                    <div class="flex gap-2">
+                        <input type="text" name="slug" id="slug" required maxlength="255"
+                               value="{{ old('slug', $article->slug) }}"
+                               class="flex-1 px-4 py-2 border border-gray-300 rounded-lg font-mono text-sm focus:ring-2 focus:ring-red-500 bg-gray-50">
+                        <button type="button" onclick="regenerateSlug()"
+                                class="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-xs whitespace-nowrap">
+                            <i class="fas fa-sync-alt mr-1"></i>Regenerar
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Solo minúsculas, números y guiones. Cambiar el slug cambia la URL pública.</p>
                 </div>
 
                 <div>
@@ -130,5 +136,22 @@
             </form>
         </div>
     </div>
+<script>
+    function titleToSlug(title) {
+        return title
+            .toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9\s-]/g, '')
+            .trim()
+            .replace(/[\s]+/g, '-')
+            .replace(/-+/g, '-')
+            .substring(0, 200);
+    }
+
+    function regenerateSlug() {
+        const title = document.getElementById('title').value;
+        document.getElementById('slug').value = titleToSlug(title);
+    }
+</script>
 </body>
 </html>
