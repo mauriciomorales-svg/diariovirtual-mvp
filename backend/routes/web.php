@@ -62,8 +62,9 @@ Route::post('/logout', function (Request $request) {
 // API de artículos para el frontend
 Route::get('/api/batch-articles', function () {
     $placeholder = 'https://via.placeholder.com/1200x630/333333/ffffff?text=Diario+Zona+Sur';
-    $articles = \App\Models\Article::where('status', 'published')
-        ->orderBy('created_at', 'desc')
+    $articles = \App\Models\Article::published()
+        ->orderByDesc('published_at')
+        ->orderByDesc('created_at')
         ->limit(30)
         ->get(['id', 'title', 'slug', 'source_hash', 'excerpt', 'content', 'image_url', 'published_at', 'is_external', 'external_url']);
 
@@ -157,6 +158,7 @@ Route::middleware(['auth'])->prefix('admin')->group(function () {
     Route::get('/articles/{article}/edit-image', [ArticleAdminController::class, 'editImage'])->name('admin.articles.edit-image');
     Route::post('/articles/{article}/update-image', [ArticleAdminController::class, 'updateImage'])->name('admin.articles.update-image');
     Route::get('/articles/{article}/extract-source', [ArticleAdminController::class, 'extractFromSource'])->name('admin.articles.extract-source');
+    Route::delete('/articles/{article}', [ArticleAdminController::class, 'destroy'])->name('admin.articles.destroy');
 });
 
 // Rutas /dev solo si ALLOW_DEV_ROUTES=true (nunca en producción pública)
@@ -191,6 +193,7 @@ if (config('app.allow_dev_routes')) {
         Route::get('/articles/{article}/edit-image', [ArticleDevController::class, 'editImage'])->name('dev.articles.edit-image');
         Route::post('/articles/{article}/update-image', [ArticleDevController::class, 'updateImage'])->name('dev.articles.update-image');
         Route::get('/articles/{article}/extract-source', [ArticleDevController::class, 'extractFromSource'])->name('dev.articles.extract-source');
+        Route::delete('/articles/{article}', [ArticleAdminController::class, 'destroy'])->name('dev.articles.destroy');
     });
 }
 

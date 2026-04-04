@@ -12,6 +12,9 @@ use Illuminate\Validation\Rule;
 
 class ArticleAdminController extends Controller
 {
+    /** Slug URL-seguro: sin puntos (evita confusión con dominios como diariozonasur.cl). */
+    private const SLUG_REGEX = '/^[a-z0-9]+(?:-[a-z0-9]+)*$/';
+
     /**
      * Lista de artículos publicados
      */
@@ -40,7 +43,7 @@ class ArticleAdminController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:500',
-            'slug' => 'required|string|max:255|unique:articles,slug',
+            'slug' => ['required', 'string', 'max:255', 'regex:'.self::SLUG_REGEX, 'unique:articles,slug'],
             'excerpt' => 'nullable|string|max:255',
             'content' => 'nullable|string',
             'image_url' => 'nullable|string|max:2000',
@@ -49,6 +52,8 @@ class ArticleAdminController extends Controller
             'status' => 'required|in:published,draft,scheduled',
             'published_at' => 'nullable|date',
             'metadata_json' => 'nullable|string',
+        ], [
+            'slug.regex' => 'El slug solo puede tener letras minúsculas, números y guiones. No pegues el dominio ni URLs (ej. use "mi-noticia" en lugar de "diariozonasur.cl").',
         ]);
 
         $validated['is_external'] = $request->boolean('is_external');
@@ -135,6 +140,7 @@ class ArticleAdminController extends Controller
                 'required',
                 'string',
                 'max:255',
+                'regex:'.self::SLUG_REGEX,
                 Rule::unique('articles', 'slug')->ignore($article->id),
             ],
             'excerpt' => 'nullable|string|max:5000',
@@ -145,6 +151,8 @@ class ArticleAdminController extends Controller
             'status' => 'required|in:published,draft,scheduled',
             'published_at' => 'nullable|date',
             'metadata_json' => 'nullable|string',
+        ], [
+            'slug.regex' => 'El slug solo puede tener letras minúsculas, números y guiones. No pegues el dominio ni URLs (ej. use "mi-noticia" en lugar de "diariozonasur.cl").',
         ]);
 
         $validated['is_external'] = $request->boolean('is_external');
@@ -250,6 +258,21 @@ class ArticleAdminController extends Controller
         return redirect()
             ->route(request()->routeIs('dev.*') ? 'dev.articles.index' : 'admin.articles.index')
             ->with('success', 'Imagen actualizada correctamente.');
+    }
+
+    /**
+     * Elimina un artículo
+     */
+    public function destroy(Article $article)
+    {
+        $title = $article->title;
+        $article->delete();
+
+        Log::info('Admin deleted article', ['title' => $title]);
+
+        return redirect()
+            ->route(request()->routeIs('dev.*') ? 'dev.articles.index' : 'admin.articles.index')
+            ->with('success', "Noticia «{$title}» eliminada.");
     }
 
     private function saveUploadedFile($file): string

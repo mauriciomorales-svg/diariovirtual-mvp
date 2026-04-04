@@ -125,13 +125,24 @@
                     <p class="text-xs text-gray-500 mt-1">Avanzado: vaciar para borrar metadata o dejar como está si no tocas este campo.</p>
                 </div>
 
-                <div class="flex flex-wrap gap-3 pt-4 border-t">
-                    <button type="submit" class="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">
-                        <i class="fas fa-save mr-2"></i>Guardar cambios
-                    </button>
-                    <a href="{{ route(request()->routeIs('dev.*') ? 'dev.articles.index' : 'admin.articles.index') }}" class="px-6 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-medium inline-flex items-center">
-                        Cancelar
-                    </a>
+                <div class="flex flex-wrap gap-3 pt-4 border-t items-center justify-between">
+                    <div class="flex gap-3">
+                        <button type="submit" class="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">
+                            <i class="fas fa-save mr-2"></i>Guardar cambios
+                        </button>
+                        <a href="{{ route(request()->routeIs('dev.*') ? 'dev.articles.index' : 'admin.articles.index') }}" class="px-6 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-medium inline-flex items-center">
+                            Cancelar
+                        </a>
+                    </div>
+                    <form method="POST"
+                          action="{{ route(request()->routeIs('dev.*') ? 'dev.articles.destroy' : 'admin.articles.destroy', $article) }}"
+                          onsubmit="return confirm('¿Eliminar esta noticia? Esta acción no se puede deshacer.')">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="px-5 py-2.5 bg-gray-700 text-white rounded-lg hover:bg-gray-900 font-medium">
+                            <i class="fas fa-trash mr-2"></i>Eliminar noticia
+                        </button>
+                    </form>
                 </div>
             </form>
         </div>
