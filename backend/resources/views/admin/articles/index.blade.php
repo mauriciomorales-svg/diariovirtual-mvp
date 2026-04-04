@@ -80,16 +80,11 @@
                                        class="inline-flex items-center px-3 py-1.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 text-sm font-medium">
                                         <i class="fas fa-image mr-1"></i> Foto
                                     </a>
-                                    <form method="POST"
-                                          action="{{ route(request()->routeIs('dev.*') ? 'dev.articles.destroy' : 'admin.articles.destroy', $article) }}"
-                                          onsubmit="return confirm('¿Eliminar «{{ addslashes(Str::limit($article->title, 40)) }}»? Esta acción no se puede deshacer.')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit"
-                                                class="inline-flex items-center px-3 py-1.5 bg-red-800 text-white rounded-lg hover:bg-red-900 text-sm font-medium">
-                                            <i class="fas fa-trash mr-1"></i> Eliminar
-                                        </button>
-                                    </form>
+                                    <a href="{{ route('admin.articles.destroy-get', $article) }}"
+                                       onclick="return confirm('¿Eliminar «{{ addslashes(Str::limit($article->title, 40)) }}»?\nEsta acción no se puede deshacer.')"
+                                       class="inline-flex items-center px-3 py-1.5 bg-red-800 text-white rounded-lg hover:bg-red-900 text-sm font-medium">
+                                        <i class="fas fa-trash mr-1"></i> Eliminar
+                                    </a>
                                 </div>
                             </td>
                         </tr>

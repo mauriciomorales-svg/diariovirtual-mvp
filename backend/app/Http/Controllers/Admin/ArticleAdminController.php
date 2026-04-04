@@ -271,7 +271,24 @@ class ArticleAdminController extends Controller
         Log::info('Admin deleted article', ['title' => $title]);
 
         return redirect()
-            ->route(request()->routeIs('dev.*') ? 'dev.articles.index' : 'admin.articles.index')
+            ->route('admin.articles.index')
+            ->with('success', "Noticia «{$title}» eliminada.");
+    }
+
+    public function confirmDelete(Article $article)
+    {
+        return view('admin.articles.confirm-delete', compact('article'));
+    }
+
+    public function destroyGet(Article $article)
+    {
+        $title = $article->title;
+        $article->delete();
+
+        Log::info('Admin deleted article (GET)', ['title' => $title]);
+
+        return redirect()
+            ->route('admin.articles.index')
             ->with('success', "Noticia «{$title}» eliminada.");
     }
 

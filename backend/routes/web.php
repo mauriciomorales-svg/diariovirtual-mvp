@@ -159,6 +159,7 @@ Route::middleware(['auth'])->prefix('admin')->group(function () {
     Route::post('/articles/{article}/update-image', [ArticleAdminController::class, 'updateImage'])->name('admin.articles.update-image');
     Route::get('/articles/{article}/extract-source', [ArticleAdminController::class, 'extractFromSource'])->name('admin.articles.extract-source');
     Route::delete('/articles/{article}', [ArticleAdminController::class, 'destroy'])->name('admin.articles.destroy');
+    Route::get('/articles/{article}/delete', [ArticleAdminController::class, 'destroyGet'])->name('admin.articles.destroy-get');
 });
 
 // Rutas /dev solo si ALLOW_DEV_ROUTES=true (nunca en producción pública)
