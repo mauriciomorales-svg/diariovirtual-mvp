@@ -46,6 +46,7 @@
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
                             <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase w-28">Borrar</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
@@ -80,12 +81,20 @@
                                        class="inline-flex items-center px-3 py-1.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 text-sm font-medium">
                                         <i class="fas fa-image mr-1"></i> Foto
                                     </a>
-                                    <a href="{{ route('admin.articles.destroy-get', $article) }}"
-                                       onclick="return confirm('¿Eliminar «{{ addslashes(Str::limit($article->title, 40)) }}»?\nEsta acción no se puede deshacer.')"
-                                       class="inline-flex items-center px-3 py-1.5 bg-red-800 text-white rounded-lg hover:bg-red-900 text-sm font-medium">
-                                        <i class="fas fa-trash mr-1"></i> Eliminar
-                                    </a>
                                 </div>
+                            </td>
+                            <td class="px-4 py-3 text-center align-middle">
+                                @php
+                                    $deleteUrl = request()->routeIs('dev.*')
+                                        ? route('dev.articles.destroy-get', $article)
+                                        : route('admin.articles.destroy-get', $article);
+                                    $confirmMsg = '¿Eliminar «'.Str::limit(preg_replace('/\s+/', ' ', strip_tags($article->title)), 50).'»? Esta acción no se puede deshacer.';
+                                @endphp
+                                <a href="{{ $deleteUrl }}"
+                                   onclick="return confirm({{ json_encode($confirmMsg) }})"
+                                   class="inline-flex items-center justify-center px-3 py-2 bg-red-900 text-white rounded-lg hover:bg-black text-sm font-semibold whitespace-nowrap shadow-sm border border-red-950">
+                                    <i class="fas fa-trash mr-1"></i> Eliminar
+                                </a>
                             </td>
                         </tr>
                         @endforeach

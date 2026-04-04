@@ -270,14 +270,11 @@ class ArticleAdminController extends Controller
 
         Log::info('Admin deleted article', ['title' => $title]);
 
-        return redirect()
-            ->route('admin.articles.index')
-            ->with('success', "Noticia «{$title}» eliminada.");
-    }
+        $indexRoute = request()->routeIs('dev.*') ? 'dev.articles.index' : 'admin.articles.index';
 
-    public function confirmDelete(Article $article)
-    {
-        return view('admin.articles.confirm-delete', compact('article'));
+        return redirect()
+            ->route($indexRoute)
+            ->with('success', "Noticia «{$title}» eliminada.");
     }
 
     public function destroyGet(Article $article)
@@ -287,8 +284,10 @@ class ArticleAdminController extends Controller
 
         Log::info('Admin deleted article (GET)', ['title' => $title]);
 
+        $indexRoute = request()->routeIs('dev.*') ? 'dev.articles.index' : 'admin.articles.index';
+
         return redirect()
-            ->route('admin.articles.index')
+            ->route($indexRoute)
             ->with('success', "Noticia «{$title}» eliminada.");
     }
 

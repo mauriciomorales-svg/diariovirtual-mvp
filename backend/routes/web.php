@@ -195,6 +195,7 @@ if (config('app.allow_dev_routes')) {
         Route::post('/articles/{article}/update-image', [ArticleDevController::class, 'updateImage'])->name('dev.articles.update-image');
         Route::get('/articles/{article}/extract-source', [ArticleDevController::class, 'extractFromSource'])->name('dev.articles.extract-source');
         Route::delete('/articles/{article}', [ArticleAdminController::class, 'destroy'])->name('dev.articles.destroy');
+        Route::get('/articles/{article}/delete', [ArticleAdminController::class, 'destroyGet'])->name('dev.articles.destroy-get');
     });
 }
 
