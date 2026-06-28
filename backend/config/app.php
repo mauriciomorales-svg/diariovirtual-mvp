@@ -56,6 +56,30 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Public frontend URL (Next.js diario)
+    |--------------------------------------------------------------------------
+    |
+    | Usado en el dashboard para enlaces "Ver diario" y mapa de pantallas.
+    |
+    */
+
+    'frontend_url' => env('FRONTEND_PUBLIC_URL', 'https://diariozonasur.cl'),
+
+    'diario_facebook_url' => env('DIARIO_FACEBOOK_URL', 'https://www.facebook.com/profile.php?id=61574405042828'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Rutas /dev sin autenticación (solo desarrollo)
+    |--------------------------------------------------------------------------
+    |
+    | En producción debe ser false: el panel queda en /admin con login.
+    |
+    */
+
+    'allow_dev_routes' => (bool) env('ALLOW_DEV_ROUTES', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

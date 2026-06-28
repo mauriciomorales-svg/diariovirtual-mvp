@@ -63,10 +63,10 @@ Route::post('/logout', function (Request $request) {
 Route::get('/api/batch-articles', function () {
     $placeholder = 'https://via.placeholder.com/1200x630/333333/ffffff?text=Diario+Zona+Sur';
     $articles = \App\Models\Article::published()
-        ->orderByDesc('published_at')
         ->orderByDesc('created_at')
-        ->limit(30)
-        ->get(['id', 'title', 'slug', 'source_hash', 'excerpt', 'content', 'image_url', 'published_at', 'is_external', 'external_url']);
+        ->orderByDesc('published_at')
+        ->limit(60)
+        ->get(['id', 'title', 'slug', 'source_hash', 'excerpt', 'content', 'image_url', 'published_at', 'is_external', 'external_url', 'metadata']);
 
     $data = $articles->map(function ($article) use ($placeholder) {
         return [
@@ -80,6 +80,7 @@ Route::get('/api/batch-articles', function () {
             'published_at' => $article->published_at?->format('Y-m-d H:i:s') ?? $article->created_at?->format('Y-m-d H:i:s'),
             'is_external' => (bool) $article->is_external,
             'external_url' => $article->external_url,
+            'metadata' => $article->metadata,
             'status' => 'published',
         ];
     })->values()->all();

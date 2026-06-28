@@ -28,7 +28,9 @@ class Article extends Model
     protected $casts = [
         'is_external' => 'boolean',
         'published_at' => 'datetime',
+        'last_viewed_at' => 'datetime',
         'metadata' => 'array',
+        'view_count' => 'integer',
     ];
 
     protected $dates = [
@@ -53,7 +55,10 @@ class Article extends Model
     public function scopePublished($query)
     {
         return $query->where('status', 'published')
-                    ->where('published_at', '<=', now());
+            ->where(function ($q) {
+                $q->whereNull('published_at')
+                    ->orWhere('published_at', '<=', now());
+            });
     }
 
     public function scopeExternal($query)

@@ -24,6 +24,26 @@ class ArticleDevController extends Controller
         return $this->adminController->index($request);
     }
 
+    public function create()
+    {
+        return $this->adminController->create();
+    }
+
+    public function store(Request $request)
+    {
+        return $this->adminController->store($request);
+    }
+
+    public function edit(Article $article)
+    {
+        return $this->adminController->edit($article);
+    }
+
+    public function update(Request $request, Article $article)
+    {
+        return $this->adminController->update($request, $article);
+    }
+
     public function editImage(Article $article)
     {
         return $this->adminController->editImage($article);

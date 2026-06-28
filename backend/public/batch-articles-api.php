@@ -10,10 +10,11 @@ try {
     $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
     $kernel->bootstrap();
 
-    $placeholder = 'https://via.placeholder.com/1200x630/333333/ffffff?text=Diario+Malleco';
+    $placeholder = 'https://via.placeholder.com/1200x630/333333/ffffff?text=Diario+Zona+Sur';
 
-    $articles = \App\Models\Article::where('status', 'published')
-        ->orderBy('created_at', 'desc')
+    $articles = \App\Models\Article::published()
+        ->orderByDesc('published_at')
+        ->orderByDesc('created_at')
         ->limit(30)
         ->get(['id', 'title', 'slug', 'source_hash', 'excerpt', 'content', 'image_url', 'published_at', 'is_external', 'external_url']);
 

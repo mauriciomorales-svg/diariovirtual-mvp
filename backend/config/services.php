@@ -39,6 +39,8 @@ return [
         'api_key' => env('GEMINI_API_KEY'),
         'project_id' => env('GEMINI_PROJECT_ID'),
         'model' => env('GEMINI_MODEL', 'gemini-1.5-flash'),
+        /** Pausa en segundos entre noticias en import batch con IA (reduce 429 en plan gratuito) */
+        'batch_delay_seconds' => (int) env('GEMINI_BATCH_DELAY_SECONDS', 5),
     ],
 
 ];

@@ -59,7 +59,7 @@
         </div>
 
         <!-- Stats Cards -->
-        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4 mb-8">
             <div class="bg-white rounded-xl shadow p-4 border-l-4 border-red-600">
                 <p class="text-sm text-gray-500 uppercase">Total</p>
                 <p class="text-2xl font-bold text-gray-800">{{ number_format($stats['total']) }}</p>
@@ -95,6 +95,32 @@
                 <p class="text-2xl font-bold text-gray-800">{{ number_format($stats['local']) }}</p>
                 <p class="text-xs text-gray-400 mt-1">creadas con IA</p>
             </div>
+            <div class="bg-white rounded-xl shadow p-4 border-l-4 border-sky-500">
+                <p class="text-sm text-gray-500 uppercase">Visitas</p>
+                <p class="text-2xl font-bold text-gray-800">{{ number_format($stats['total_views'] ?? 0) }}</p>
+                <p class="text-xs text-gray-400 mt-1">lecturas en el diario</p>
+            </div>
+        </div>
+
+        <div class="mb-8 rounded-xl border border-sky-200 bg-gradient-to-br from-sky-50 to-white p-5 shadow-sm">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-lg font-bold text-gray-800"><i class="fas fa-route text-sky-600 mr-2"></i>Flujo al diario</h2>
+                    <p class="text-sm text-gray-600 mt-1">Editor → publicado → <strong>diariozonasur.cl</strong> → lectores (WhatsApp / Facebook / Google)</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <a href="{{ rtrim(config('app.frontend_url'), '/') }}" target="_blank" rel="noopener"
+                       class="inline-flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 text-sm font-medium">
+                        <i class="fas fa-external-link-alt"></i> Abrir portada
+                    </a>
+                    @if(config('app.diario_facebook_url'))
+                        <a href="{{ config('app.diario_facebook_url') }}" target="_blank" rel="noopener"
+                           class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-blue-300 text-blue-800 rounded-lg hover:bg-blue-50 text-sm font-medium">
+                            <i class="fab fa-facebook"></i> Facebook
+                        </a>
+                    @endif
+                </div>
+            </div>
         </div>
 
         @if(isset($isDev) && $isDev)
@@ -119,6 +145,32 @@
                     <span class="inline-flex items-center gap-2 bg-white/20 px-4 py-2 rounded-lg text-sm font-medium">Abrir formulario <i class="fas fa-arrow-right"></i></span>
                 </div>
             </a>
+        @endif
+
+        @if(isset($topViews) && $topViews->isNotEmpty())
+        <div class="mb-8 bg-white rounded-xl shadow overflow-hidden">
+            <div class="px-6 py-4 bg-gray-50 border-b flex justify-between items-center">
+                <h2 class="font-bold text-gray-800">
+                    <i class="fas fa-chart-line text-sky-600 mr-2"></i>Noticias con más visitas
+                </h2>
+                <span class="text-sm text-gray-500">Desde que se activó el contador</span>
+            </div>
+            <div class="divide-y divide-gray-100">
+                @foreach($topViews as $item)
+                    <div class="flex items-center gap-4 p-4 hover:bg-gray-50">
+                        <span class="text-lg font-bold text-sky-700 w-16 text-right">{{ number_format((int) $item->view_count) }}</span>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-medium text-gray-800 truncate">{{ \Illuminate\Support\Str::limit($item->title, 60) }}</p>
+                            @if($item->last_viewed_at)
+                                <p class="text-xs text-gray-500">Última visita: {{ $item->last_viewed_at->format('d/m/Y H:i') }}</p>
+                            @endif
+                        </div>
+                        <a href="{{ rtrim(config('app.frontend_url'), '/') }}/{{ $item->slug }}" target="_blank" rel="noopener"
+                           class="text-sm text-sky-700 hover:underline whitespace-nowrap">Ver en diario →</a>
+                    </div>
+                @endforeach
+            </div>
+        </div>
         @endif
 
         <!-- Quick Actions + Recent -->

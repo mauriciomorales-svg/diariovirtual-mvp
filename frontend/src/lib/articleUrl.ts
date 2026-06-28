@@ -23,15 +23,15 @@ export function slugLooksLikeHostname(slug: string): boolean {
  * Ruta interna o URL externa para "Leer más" / compartir.
  */
 export function publicArticlePath(article: Article): string {
+  const slug = (article.slug || '').trim();
+  if (slug && !slugLooksLikeHostname(slug)) {
+    return `/${encodeURIComponent(slug)}`;
+  }
   if (article.is_external && article.external_url) {
     return article.external_url;
   }
-  const slug = (article.slug || '').trim();
   if (!slug) {
     return `/news/${encodeURIComponent(article.id)}`;
   }
-  if (slugLooksLikeHostname(slug)) {
-    return `/news/${encodeURIComponent(article.id)}`;
-  }
-  return `/${encodeURIComponent(slug)}`;
+  return `/news/${encodeURIComponent(article.id)}`;
 }

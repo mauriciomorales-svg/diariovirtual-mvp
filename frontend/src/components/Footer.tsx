@@ -10,10 +10,9 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="col-span-1 md:col-span-1">
-            <h3 className="text-2xl font-black text-red-500 mb-4">🚨 EL DIARIO</h3>
+            <h3 className="text-2xl font-black text-red-500 mb-4">Diario Zona Sur</h3>
             <p className="text-gray-400 text-sm mb-4">
-              Tu fuente de noticias locales de la Provincia de Malleco. 
-              Angol, Victoria, Collipulli y toda la región.
+              Información para la región sur: Araucanía, Malleco, Angol, Victoria, Collipulli y alrededores.
             </p>
             <div className="flex space-x-3">
               <a href="#" className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center hover:bg-blue-700 transition">
@@ -46,7 +45,7 @@ export default function Footer() {
             <ul className="space-y-2 text-sm text-gray-400">
               <li>📍 Angol, Chile</li>
               <li>📞 +56 9 1234 5678</li>
-              <li>✉️ contacto@diariomalleco.cl</li>
+              <li>✉️ contacto@diariozonasur.cl</li>
               <li>🕐 Lunes a Viernes: 8:00 - 18:00</li>
             </ul>
           </div>
@@ -78,7 +77,7 @@ export default function Footer() {
       <div className="bg-gray-950 border-t border-gray-800">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex flex-col md:flex-row justify-between items-center text-sm text-gray-500">
-            <p>© {currentYear} El Diario de Malleco. Todos los derechos reservados.</p>
+            <p>© {currentYear} Diario Zona Sur. Todos los derechos reservados.</p>
             <div className="flex space-x-4 mt-2 md:mt-0">
               <Link href="/privacidad" className="hover:text-white transition">Política de Privacidad</Link>
               <Link href="/terminos" className="hover:text-white transition">Términos de Uso</Link>

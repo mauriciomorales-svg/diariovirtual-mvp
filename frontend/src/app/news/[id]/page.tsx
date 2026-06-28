@@ -1,6 +1,6 @@
 import { getArticleById } from '@/lib/api';
 import ArticleDetailView from '@/components/ArticleDetailView';
-import { getProxiedImageUrl } from '@/lib/image';
+import { getOpenGraphImageUrl } from '@/lib/image';
 import { notFound } from 'next/navigation';
 import type { Article } from '@/types/article';
 
@@ -32,11 +32,7 @@ function absolutePublicUrl(pathOrUrl: string): string {
 }
 
 function buildMetadata(article: Article, pathForCanonical: string) {
-  const imagePath = getProxiedImageUrl(article.image_url, {
-    title: article.title,
-    slug: article.slug,
-  });
-  const imageUrl = absolutePublicUrl(imagePath);
+  const imageUrl = getOpenGraphImageUrl(article.image_url || '');
   const metadata = normalizeMetadata(article.metadata);
   const originalUrl = article.external_url || (metadata.original_url as string | undefined);
 

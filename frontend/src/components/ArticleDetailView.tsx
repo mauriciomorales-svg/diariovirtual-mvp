@@ -1,9 +1,20 @@
 import AdminImageEditLink from '@/components/AdminImageEditLink';
-import { injectAds } from '@/lib/adInjector';
-import AdInjector from '@/components/AdInjector';
-import ShareWhatsApp from '@/components/ShareWhatsApp';
 import { getProxiedImageUrl } from '@/lib/image';
+import ShareWhatsApp from '@/components/ShareWhatsApp';
 import type { Article } from '@/types/article';
+
+function inferSourceFromUrl(url?: string | null): string | undefined {
+  if (!url) return undefined;
+  try {
+    const host = new URL(url).hostname.replace(/^www\./i, '').toLowerCase();
+    if (host.includes('biobiochile')) return 'BioBioChile';
+    if (host.includes('elmostrador')) return 'El Mostrador';
+    if (host.includes('cooperativa')) return 'Cooperativa';
+    return host.split('.')[0].replace(/-/g, ' ');
+  } catch {
+    return undefined;
+  }
+}
 
 function normalizeMetadata(raw: unknown): Record<string, unknown> {
   if (!raw) return {};
@@ -22,8 +33,11 @@ function normalizeMetadata(raw: unknown): Record<string, unknown> {
 
 export default function ArticleDetailView({ article }: { article: Article }) {
   const metadata = normalizeMetadata(article.metadata);
-  const originalSource = (metadata.original_source as string | undefined) || 'Agencia de Noticias';
   const originalUrl = article.external_url || (metadata.original_url as string | undefined);
+  const originalSource =
+    (metadata.original_source as string | undefined) ||
+    inferSourceFromUrl(originalUrl) ||
+    'Agencia de Noticias';
   const transformedAt = metadata.transformed_at
     ? new Date(String(metadata.transformed_at)).toLocaleDateString('es-CL')
     : null;
@@ -43,11 +57,7 @@ export default function ArticleDetailView({ article }: { article: Article }) {
       .join('');
   }
 
-  const contentWithAds = injectAds(toHtml(rawContent));
-  const processedContent = contentWithAds.replace(
-    '<div data-native-ad="true"></div>',
-    '<div id="native-ad-placeholder"></div>'
-  );
+  const processedContent = toHtml(rawContent);
 
   const published = article.published_at
     ? new Date(article.published_at)
@@ -111,8 +121,6 @@ export default function ArticleDetailView({ article }: { article: Article }) {
           dangerouslySetInnerHTML={{ __html: processedContent }}
           className="article-content"
         />
-
-        <AdInjector content={processedContent} />
 
         {originalUrl && (
           <div className="mt-8 p-6 bg-gray-100 rounded-lg border-l-4 border-blue-500">

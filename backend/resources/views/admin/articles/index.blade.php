@@ -36,6 +36,31 @@
             </div>
         @endif
 
+        <div class="mb-6 rounded-xl border border-sky-200 bg-gradient-to-br from-sky-50 to-white p-5 shadow-sm">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-lg font-bold text-gray-800"><i class="fas fa-route text-sky-600 mr-2"></i>Flujo al diario</h2>
+                    <p class="text-sm text-gray-600 mt-1">Editor → publicado → <strong>diariozonasur.cl</strong> → lectores</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-xs uppercase text-gray-500">Visitas totales al diario</p>
+                    <p class="text-2xl font-bold text-sky-700">{{ number_format($totalViews) }}</p>
+                </div>
+            </div>
+            <div class="mt-3 flex flex-wrap gap-2">
+                <a href="{{ rtrim(config('app.frontend_url'), '/') }}" target="_blank" rel="noopener"
+                   class="inline-flex items-center gap-2 px-3 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 text-sm font-medium">
+                    <i class="fas fa-home"></i> Portada del diario
+                </a>
+                @if(config('app.diario_facebook_url'))
+                    <a href="{{ config('app.diario_facebook_url') }}" target="_blank" rel="noopener"
+                       class="inline-flex items-center gap-2 px-3 py-2 bg-white border border-blue-300 text-blue-800 rounded-lg hover:bg-blue-50 text-sm font-medium">
+                        <i class="fab fa-facebook"></i> Facebook
+                    </a>
+                @endif
+            </div>
+        </div>
+
         <div class="bg-white rounded-xl shadow overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
@@ -45,6 +70,7 @@
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Título</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Visitas</th>
                             <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
                             <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase w-28">Borrar</th>
                         </tr>
@@ -71,8 +97,19 @@
                             <td class="px-4 py-3 text-sm text-gray-500">
                                 {{ $article->published_at?->format('d/m/Y H:i') ?? '—' }}
                             </td>
+                            <td class="px-4 py-3 text-sm text-gray-700 font-medium">
+                                {{ number_format((int) ($article->view_count ?? 0)) }}
+                            </td>
                             <td class="px-4 py-3">
                                 <div class="flex items-center justify-end gap-2 flex-wrap">
+                                    @if($article->status === 'published')
+                                        <a href="{{ rtrim(config('app.frontend_url'), '/') }}/{{ $article->slug }}"
+                                           target="_blank" rel="noopener"
+                                           class="inline-flex items-center px-3 py-1.5 bg-sky-100 text-sky-800 rounded-lg hover:bg-sky-200 text-sm font-medium"
+                                           title="Ver en el diario público">
+                                            <i class="fas fa-external-link-alt mr-1"></i> Diario
+                                        </a>
+                                    @endif
                                     <a href="{{ route(request()->routeIs('dev.*') ? 'dev.articles.edit' : 'admin.articles.edit', $article) }}"
                                        class="inline-flex items-center px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium">
                                         <i class="fas fa-edit mr-1"></i> Editar

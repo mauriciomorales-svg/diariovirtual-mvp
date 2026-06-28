@@ -25,7 +25,9 @@ class ArticleAdminController extends Controller
             ->orderByDesc('created_at')
             ->paginate(20);
 
-        return view('admin.articles.index', compact('articles'));
+        $totalViews = (int) Article::sum('view_count');
+
+        return view('admin.articles.index', compact('articles', 'totalViews'));
     }
 
     /**

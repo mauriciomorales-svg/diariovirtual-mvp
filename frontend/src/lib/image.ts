@@ -48,6 +48,30 @@ const DYNAMIC_PLACEHOLDER = (t: string, s: string) => `/img/placeholder-img?s=${
 /**
  * Devuelve la URL de la imagen. Si es placeholder genérico, genera uno único por artículo.
  */
+const SITE_ORIGIN = (process.env.NEXT_PUBLIC_SITE_URL || 'https://diariozonasur.cl').replace(/\/$/, '');
+
+/**
+ * URL absoluta para Open Graph / WhatsApp / Facebook.
+ * Usa la imagen directa del API (sin proxy) y ?v= para invalidar caché de redes sociales.
+ */
+export function getOpenGraphImageUrl(imageUrl: string): string {
+  const url = (imageUrl || '').trim();
+  if (!url) return `${SITE_ORIGIN}/og-image.jpg`;
+
+  try {
+    const parsed = new URL(url);
+    if (!parsed.searchParams.has('v')) {
+      parsed.searchParams.set('v', '2');
+    }
+    return parsed.toString();
+  } catch {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url.includes('?') ? `${url}&v=2` : `${url}?v=2`;
+    }
+    return `${SITE_ORIGIN}${url.startsWith('/') ? '' : '/'}${url}`;
+  }
+}
+
 export function getProxiedImageUrl(imageUrl: string, options?: ImageOptions): string {
   const url = (imageUrl && typeof imageUrl === 'string' && imageUrl.trim()) ? imageUrl.trim() : '';
   const isPlaceholder = !url || url.includes(EXTERNAL_PLACEHOLDER);

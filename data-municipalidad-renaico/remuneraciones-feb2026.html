@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Análisis Remuneraciones – Municipalidad | Febrero 2026</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --muni:  #3b82f6;
+    --edu:   #10b981;
+    --salud: #f59e0b;
+    --planta:#6366f1;
+    --contrata:#ec4899;
+    --bg:    #0f172a;
+    --card:  #1e293b;
+    --card2: #273549;
+    --text:  #e2e8f0;
+    --muted: #94a3b8;
+    --border:#334155;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; padding: 1.5rem; }
+  h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: .25rem; }
+  .subtitle { color: var(--muted); font-size: .9rem; margin-bottom: 1.5rem; }
+  .badge { display: inline-block; padding: .2rem .6rem; border-radius: 999px; font-size: .7rem; font-weight: 600; margin-left: .5rem; }
+  .b-muni  { background: #1d4ed8; color: #bfdbfe; }
+  .b-edu   { background: #065f46; color: #a7f3d0; }
+  .b-salud { background: #92400e; color: #fde68a; }
+
+  /* ── KPI cards ── */
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+  .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem; }
+  .kpi-label { color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; margin-bottom: .3rem; }
+  .kpi-value { font-size: 1.4rem; font-weight: 700; }
+  .kpi-sub   { color: var(--muted); font-size: .75rem; margin-top: .2rem; }
+
+  /* ── Grid layout ── */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  @media(max-width:900px){ .grid2,.grid3{ grid-template-columns:1fr; } }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; }
+  .card h2 { font-size: .95rem; font-weight: 600; margin-bottom: 1rem; color: var(--text); }
+  .card h2 span { color: var(--muted); font-weight: 400; font-size: .8rem; }
+
+  canvas { max-height: 280px; }
+
+  /* ── Tables ── */
+  table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+  thead tr { background: var(--card2); }
+  th { padding: .5rem .75rem; text-align: left; color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: .7rem; letter-spacing: .05em; }
+  td { padding: .45rem .75rem; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .chip { display: inline-block; padding: .15rem .5rem; border-radius: 6px; font-size: .7rem; font-weight: 600; }
+  .chip-muni  { background:#1d4ed830; color:#93c5fd; }
+  .chip-edu   { background:#06604030; color:#6ee7b7; }
+  .chip-salud { background:#92400e30; color:#fcd34d; }
+  .chip-planta   { background:#4f46e530; color:#a5b4fc; }
+  .chip-contrata { background:#be185d30; color:#f9a8d4; }
+
+  .progress-bar { background: var(--border); border-radius: 999px; height: 6px; margin-top: 4px; }
+  .progress-fill { height: 6px; border-radius: 999px; }
+
+  .section-title { font-size: 1rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; margin: 1.5rem 0 .75rem; font-size: .75rem; }
+
+  .tag-row { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .tag { padding: .3rem .8rem; border-radius: 999px; font-size: .75rem; cursor: pointer; border: 1px solid var(--border); background: var(--card2); transition: .15s; }
+  .tag.active { border-color: #60a5fa; color: #60a5fa; }
+</style>
+</head>
+<body>
+
+<h1>Remuneraciones Municipalidad &mdash; Febrero 2026</h1>
+<p class="subtitle">Datos públicos de transparencia. Planta y Contrata · Municipalidad, Educación y Salud · 275 funcionarios totales</p>
+
+<div class="kpi-grid" id="kpiGrid"></div>
+
+<p class="section-title">Masa salarial por sector y vínculo</p>
+<div class="grid2">
+  <div class="card"><h2>Masa salarial bruta por sector <span>($ millones)</span></h2><canvas id="cSector"></canvas></div>
+  <div class="card"><h2>Planta vs Contrata – bruta promedio por sector</h2><canvas id="cPvsC"></canvas></div>
+</div>
+
+<div class="grid2">
+  <div class="card"><h2>Distribución por estamento <span>(todos los sectores)</span></h2><canvas id="cEstamento"></canvas></div>
+  <div class="card"><h2>Brecha bruta → líquida <span>(promedio % descuento por sector)</span></h2><canvas id="cBrecha"></canvas></div>
+</div>
+
+<p class="section-title">Horas extraordinarias</p>
+<div class="grid2">
+  <div class="card"><h2>Costo total HH.EE. por sector <span>($ millones, incluido en bruta)</span></h2><canvas id="cHoras"></canvas></div>
+  <div class="card"><h2>Top 15 – monto HH.EE. del mes</h2>
+    <table id="tHoras">
+      <thead><tr><th>Funcionario</th><th>Sector</th><th class="num">$ HH.EE.</th><th class="num">Hrs</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<p class="section-title">Ranking de remuneraciones</p>
+<div class="grid2">
+  <div class="card"><h2>Top 15 – remuneración bruta</h2>
+    <table id="tTop">
+      <thead><tr><th>Funcionario</th><th>Cargo</th><th>Sector</th><th class="num">Bruta</th><th class="num">Líquida</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="card"><h2>Dispersión salarial por estamento <span>(bruta, todos)</span></h2><canvas id="cDispersion"></canvas></div>
+</div>
+
+<p class="section-title">Viáticos del mes</p>
+<div class="grid2">
+  <div class="card"><h2>Top viáticos <span>(no incluidos en remuneración bruta)</span></h2>
+    <table id="tViaticos">
+      <thead><tr><th>Funcionario</th><th>Cargo</th><th>Sector</th><th class="num">Viáticos</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="card"><h2>Contrata Municipalidad – Duración contratos vigentes</h2><canvas id="cContratos"></canvas></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  DATA
+// ═══════════════════════════════════════════════════════════════
+const data = [
+// PLANTA MUNICIPALIDAD
+{nom:"Badilla Espinoza, Leonardo",cargo:"ADMINISTRADOR MUNICIPAL",est:"Directivo",sector:"Municipalidad",vinculo:"Planta",bruta:3346152,liquida:2693530,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Cardenas Neira, Marcelo",cargo:"JEFE UDEL",est:"Jefatura",sector:"Municipalidad",vinculo:"Planta",bruta:3408191,liquida:2872010,hhee_d:284206,hhee_n:0,hhee_f:0,hrs_d:30,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Castagnoli Vidal, Ezzio",cargo:"EXAMINADOR LICENCIAS",est:"Administrativo",sector:"Municipalidad",vinculo:"Planta",bruta:1363210,liquida:1206856,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:112300},
+{nom:"Chanquey Puran, Jorge",cargo:"JEFE DEPTO. TRÁNSITO",est:"Jefatura",sector:"Municipalidad",vinculo:"Planta",bruta:1687050,liquida:1336085,hhee_d:39188,hhee_n:0,hhee_f:0,hrs_d:5,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Chavez Sepulveda, Gustavo",cargo:"SECRETARIO MUNICIPAL",est:"Directivo",sector:"Municipalidad",vinculo:"Planta",bruta:4041390,liquida:3195584,hhee_d:301358,hhee_n:0,hhee_f:0,hrs_d:22,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Cuevas Carrasco, Carmen",cargo:"CONDUCTOR",est:"Auxiliar",sector:"Municipalidad",vinculo:"Planta",bruta:1700272,liquida:1535381,hhee_d:142105,hhee_n:0,hhee_f:0,hrs_d:40,hrs_n:0,hrs_f:0,viaticos:210656},
+{nom:"Delgadillo Soto, Mauricio",cargo:"AUXILIAR",est:"Auxiliar",sector:"Municipalidad",vinculo:"Planta",bruta:1108869,liquida:981641,hhee_d:35315,hhee_n:0,hhee_f:0,hrs_d:12,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Diaz Garces, Jacqueline",cargo:"ENCARGADA REMUNERACIONES",est:"Administrativo",sector:"Municipalidad",vinculo:"Planta",bruta:1189171,liquida:899633,hhee_d:90391,hhee_n:0,hhee_f:0,hrs_d:27,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Diaz Pavez, Constanza",cargo:"SECPLAN",est:"Directivo",sector:"Municipalidad",vinculo:"Planta",bruta:4016000,liquida:3416952,hhee_d:410943,hhee_n:0,hhee_f:0,hrs_d:30,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Flores Bustamante, Guillermo",cargo:"DIR. ADM. Y FINANZAS",est:"Directivo",sector:"Municipalidad",vinculo:"Planta",bruta:3835918,liquida:2866885,hhee_d:342452,hhee_n:0,hhee_f:0,hrs_d:25,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Gallegos Alveal, Veronica",cargo:"JEFE DEPTO. RR.HH.",est:"Jefatura",sector:"Municipalidad",vinculo:"Planta",bruta:2557019,liquida:1989692,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Gallegos Gallegos, Carmen",cargo:"DIR. SEGURIDAD PÚBLICA",est:"Profesional",sector:"Municipalidad",vinculo:"Planta",bruta:2609236,liquida:2204100,hhee_d:250801,hhee_n:0,hhee_f:0,hrs_d:32,hrs_n:0,hrs_f:0,viaticos:32445},
+{nom:"Gonzalez Salgado, Patricia",cargo:"ENCARGADO DISCAPACIDAD",est:"Técnico",sector:"Municipalidad",vinculo:"Planta",bruta:1681451,liquida:1527889,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Henriquez Carrillo, Elvira",cargo:"ADMINISTRATIVO JPL",est:"Administrativo",sector:"Municipalidad",vinculo:"Planta",bruta:1329392,liquida:1124035,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Henriquez Orellana, Luz",cargo:"ENCARGADO OFICINA PARTES",est:"Administrativo",sector:"Municipalidad",vinculo:"Planta",bruta:1273184,liquida:1108016,hhee_d:95921,hhee_n:0,hhee_f:0,hrs_d:27,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Lopez Mariangel, Jose",cargo:"CONDUCTOR",est:"Auxiliar",sector:"Municipalidad",vinculo:"Planta",bruta:1272376,liquida:1080197,hhee_d:42632,hhee_n:0,hhee_f:0,hrs_d:12,hrs_n:0,hrs_f:0,viaticos:52664},
+{nom:"Mera Zirotti, Monica",cargo:"JUEZ POLICÍA LOCAL",est:"Directivo",sector:"Municipalidad",vinculo:"Planta",bruta:3922069,liquida:3131882,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Molina Toro, Carlos",cargo:"EXAMINADOR TEÓRICO-PRÁCTICO",est:"Técnico",sector:"Municipalidad",vinculo:"Planta",bruta:1499262,liquida:1221335,hhee_d:6550,hhee_n:0,hhee_f:0,hrs_d:1,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Muñoz Cea, Jose Adolfo",cargo:"CONDUCTOR",est:"Auxiliar",sector:"Municipalidad",vinculo:"Planta",bruta:1110003,liquida:956233,hhee_d:10658,hhee_n:0,hhee_f:0,hrs_d:3,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Musre Contreras, Claudio",cargo:"ALCALDE",est:"Alcalde",sector:"Municipalidad",vinculo:"Planta",bruta:6720854,liquida:5279323,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Obreque Pacheco, Patricia",cargo:"JEFA DE CULTURA",est:"Profesional",sector:"Municipalidad",vinculo:"Planta",bruta:2938465,liquida:2185042,hhee_d:170524,hhee_n:0,hhee_f:0,hrs_d:18,hrs_n:0,hrs_f:0,viaticos:32445},
+{nom:"Olate Bravo, Alejandro",cargo:"JEFE OPERACIONES",est:"Jefatura",sector:"Municipalidad",vinculo:"Planta",bruta:2941558,liquida:2554273,hhee_d:305664,hhee_n:0,hhee_f:0,hrs_d:39,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Pacheco Cea, Francisco",cargo:"CONDUCTOR",est:"Auxiliar",sector:"Municipalidad",vinculo:"Planta",bruta:1108781,liquida:962729,hhee_d:10043,hhee_n:0,hhee_f:0,hrs_d:3,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Palacios Ferreira, Maria B.",cargo:"ASISTENTE SOCIAL",est:"Profesional",sector:"Municipalidad",vinculo:"Planta",bruta:2408620,liquida:1845262,hhee_d:117563,hhee_n:0,hhee_f:0,hrs_d:15,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Peña Nuñez, Benjamin",cargo:"SECRETARIO JPL",est:"Profesional",sector:"Municipalidad",vinculo:"Planta",bruta:2237314,liquida:1798722,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Rivera Molina, Enrique",cargo:"GESTOR DESARROLLO",est:"Profesional",sector:"Municipalidad",vinculo:"Planta",bruta:2656958,liquida:2176328,hhee_d:282151,hhee_n:0,hhee_f:0,hrs_d:36,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Rojas Rios, Paulina",cargo:"TÉCNICO SECPLAN",est:"Técnico",sector:"Municipalidad",vinculo:"Planta",bruta:2112584,liquida:1810759,hhee_d:203776,hhee_n:0,hhee_f:0,hrs_d:26,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Saavedra Soto, Carolina",cargo:"DIDECO",est:"Directivo",sector:"Municipalidad",vinculo:"Planta",bruta:3903392,liquida:3153613,hhee_d:301358,hhee_n:0,hhee_f:0,hrs_d:22,hrs_n:0,hrs_f:0,viaticos:32445},
+{nom:"Saldivia Sotomayor, Patricia",cargo:"DIRECTOR DE OBRAS",est:"Directivo",sector:"Municipalidad",vinculo:"Planta",bruta:3165742,liquida:2573249,hhee_d:171734,hhee_n:0,hhee_f:0,hrs_d:15,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Sanchez Morales, Eduardo",cargo:"CONDUCTOR",est:"Auxiliar",sector:"Municipalidad",vinculo:"Planta",bruta:926007,liquida:781177,hhee_d:6696,hhee_n:0,hhee_f:0,hrs_d:2,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Segura Sandoval, Judith",cargo:"ENCARGADA RENTAS",est:"Administrativo",sector:"Municipalidad",vinculo:"Planta",bruta:1038769,liquida:890441,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Soto Voitmann, Christel",cargo:"DIRECTOR DE CONTROL",est:"Directivo",sector:"Municipalidad",vinculo:"Planta",bruta:3451932,liquida:2673807,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Tobar Zurita, Susana",cargo:"ADMINISTRATIVO CULTURA",est:"Administrativo",sector:"Municipalidad",vinculo:"Planta",bruta:1204875,liquida:1029577,hhee_d:12028,hhee_n:0,hhee_f:0,hrs_d:3,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Trincado Jimenez, Gaston",cargo:"ENCARGADO TRANSPARENCIA",est:"Profesional",sector:"Municipalidad",vinculo:"Planta",bruta:2257467,liquida:1796519,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Zambrano Soto, Sonia",cargo:"ADMINISTRATIVO CONTABLE",est:"Administrativo",sector:"Municipalidad",vinculo:"Planta",bruta:1533282,liquida:1263861,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Zerene Pavez, Jeannette",cargo:"ENC. SAP-SUF-RSH",est:"Administrativo",sector:"Municipalidad",vinculo:"Planta",bruta:1368839,liquida:1157331,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+
+// PLANTA EDUCACIÓN (81)
+{nom:"Acuña Cifuentes, Javier",cargo:"DIRECTOR",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2907228,liquida:1410479,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Acuña Saez, Erika",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2183850,liquida:1459781,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Aguayo Perez, Jessica",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2486106,liquida:1156426,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Alvarado Perez, Valeska",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2218470,liquida:1688483,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Alvarez Gomez, Ruben",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:303962,liquida:245412,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Arriagada Garces, Alexis",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1324550,liquida:730731,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Beltran Gavilan, Mireya",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2438612,liquida:1793904,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Bravo Narbona, Elizabeth",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1838926,liquida:688776,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Burgos Martinez, Alejandra",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1419310,liquida:850835,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Caceres Duran, Ximena",cargo:"INSPECTOR GENERAL",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:3137685,liquida:1257967,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Carrasco Carrasco, Carolina",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1645822,liquida:1293897,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Carrasco Cid, Evelyn",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2085884,liquida:1607181,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Catalan Villalobos, Midalett",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1530959,liquida:646082,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Chabur Padilla, Eduardo",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1454936,liquida:780777,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Cid Castro, Jannette",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1764545,liquida:1572676,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Cifuentes Cifuentes, Victor",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2569417,liquida:1443285,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Cifuentes Ojeda, Ana",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1719072,liquida:1350558,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Cifuentes Soto, Mariela",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2613952,liquida:1976350,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Delgado Vidal, Leonor",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2062740,liquida:1635066,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Diaz Garrido, Noelia",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2054296,liquida:1181439,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Duarte Villena, Maria C.",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2008853,liquida:1027793,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Duran Osses, Nancy",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2761915,liquida:1446513,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Galdames Carrasco, Victor",cargo:"DIRECTOR",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:3947132,liquida:2716950,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Garcia Placencia, Sergio",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2056687,liquida:1130880,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Gatica Iglesias, Lorena",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2109951,liquida:1657106,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Gonzalez Conejeros, Elier",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:3617005,liquida:2117192,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Gonzalez Maureira, Dalton",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2090438,liquida:1536311,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Gonzalez Villalobos, Jose",cargo:"DIRECTOR",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:3899727,liquida:2230116,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Grandon Henriquez, Cecilia",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1737107,liquida:1131642,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Gutierrez Riffo, Hector",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2619982,liquida:1158287,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Gutierrez Riffo, Irene",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2251722,liquida:1968505,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Guzman Navarrete, Cecilia",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2332829,liquida:1314173,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Henriquez Rocha, Oscar",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:3502353,liquida:2016786,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Jeldres Soto, Ruth",cargo:"DIRECTOR",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:3623612,liquida:2840577,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Jimenez Carrasco, Jessica",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1224743,liquida:230069,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Lagos Davila, Natacha",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1950866,liquida:1113402,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Lavin Martel, Isabel",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1448687,liquida:1141599,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Leiva Beltran, Olivia",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2699432,liquida:2095941,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Levio Pezo, Macarena",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1825457,liquida:1475770,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Lopez Zapata, Gustavo",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1593999,liquida:993803,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Mardones Sandoval, Catalina",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1736226,liquida:916933,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Martinez Cifuentes, Norma",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1936138,liquida:909660,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Mayorga Carmona, Ismael",cargo:"JEFE DE UTP",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:3102036,liquida:2391508,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Mayorga Escobar, Daniela",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2020683,liquida:1168526,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Medina Venegas, Carmen",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2904953,liquida:2020170,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Mellado Vasquez, Marcia",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1439409,liquida:505093,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Mendez Rodriguez, Katherine",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1426873,liquida:794239,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Montoya Perez, Carla",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2434448,liquida:1424348,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Montoya Perez, Paola",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2093752,liquida:952346,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Moreira Martinez, Arlette",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1702805,liquida:924042,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Muñoz Avila, Maria F.",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2336209,liquida:1504568,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Muñoz Diaz, Solvey",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1440862,liquida:1162070,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Muñoz Olivero, Carmen",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1707467,liquida:1255836,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Oses Echaurren, Pablo",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2263549,liquida:1723804,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Pacheco Cid, Cesar",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2474528,liquida:1632040,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Ponce Soto, Yaresla",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2402548,liquida:1848954,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Prado Llanos, Luis",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:3804656,liquida:2966728,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Quezada Segura, Maribel",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2067093,liquida:1178397,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Ramirez Alarcon, Carmen",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1846730,liquida:948319,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Ramos Mollinedo, Rafael",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1532816,liquida:1349532,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Rebolledo Gonzalez, Paula",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1902274,liquida:853945,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Reyes Campos, Claudia",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2016950,liquida:1328091,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Rifo Cuevas, Rosa",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1531513,liquida:1236581,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Rios Carrillo, Paula",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1605502,liquida:1224653,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Rivas Gonzalez, Daniela",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1671220,liquida:1332131,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Rivas Pinto, Edith",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1949185,liquida:1447445,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Saavedra Garces, Francisca",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2241090,liquida:1510010,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Saez Marin, Rayen",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2599311,liquida:2037524,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Saez Paredes, Hector",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1320823,liquida:715155,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Salas Millalen, Nayareth",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1771964,liquida:968235,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Schevach Garay, Cristian",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:3103685,liquida:2323813,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Seguel Morales, Maria C.",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1915343,liquida:1417754,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Sepulveda Bustos, Ramon",cargo:"JEFE UTP",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:3537627,liquida:2520687,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Sepulveda Gacitua, Jonnathan",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2229956,liquida:1230145,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Sepulveda Muñoz, Pamela",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2383554,liquida:914146,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Silva Quezada, Berta",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:3183329,liquida:2107177,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Soto Beltran, Ernestina",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2757895,liquida:2118182,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Spinola Ormeño, Sheridan",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2047240,liquida:1558255,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Torres Escobar, Maria Jose",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2229962,liquida:849664,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Urrutia Troncoso, Rina",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:1816414,liquida:446257,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Zapata Lican, Paola",cargo:"DOCENTE",est:"Profesional",sector:"Educación",vinculo:"Planta",bruta:2080493,liquida:1516304,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+
+// PLANTA SALUD (42)
+{nom:"Avello Guzman, Ana",cargo:"AUXILIAR DE ASEO",est:"Auxiliar de Salud",sector:"Salud",vinculo:"Planta",bruta:1321301,liquida:1158727,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Avello Guzman, Eliazar",cargo:"CONDUCTOR",est:"Auxiliar de Salud",sector:"Salud",vinculo:"Planta",bruta:1910092,liquida:1429677,hhee_d:270120,hhee_n:89144,hhee_f:0,hrs_d:40,hrs_n:11,hrs_f:0,viaticos:0},
+{nom:"Badilla Urra, Teofila",cargo:"CONTADOR AUDITOR",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Planta",bruta:1869144,liquida:1541028,hhee_d:38324,hhee_n:0,hhee_f:0,hrs_d:4,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Bahamonde Salgado, Teresa",cargo:"ENFERMERA",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Planta",bruta:2559914,liquida:2060829,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Belmar Mardones, Paulina",cargo:"ODONTÓLOGA",est:"Médico/Dentista",sector:"Salud",vinculo:"Planta",bruta:3830802,liquida:3018195,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Benitez Luengo, Marcelina",cargo:"ENFERMERA COOR.",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Planta",bruta:2499839,liquida:1969754,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Castro Gonzalez, Daniela",cargo:"ADQUISICIONES DSM",est:"Administrativo de Salud",sector:"Salud",vinculo:"Planta",bruta:1351212,liquida:1090353,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Contreras Castro, Juan",cargo:"AUX. PARAMÉDICO",est:"Técnico de Salud",sector:"Salud",vinculo:"Planta",bruta:2113793,liquida:1465362,hhee_d:164760,hhee_n:197720,hhee_f:0,hrs_d:20,hrs_n:20,hrs_f:0,viaticos:0},
+{nom:"Dietz Urra, Izabho",cargo:"ENFERMERA MAIS",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Planta",bruta:2173023,liquida:1338023,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Espinoza Riquelme, Maria",cargo:"ADQUISICIONES DSM",est:"Técnico de Salud",sector:"Salud",vinculo:"Planta",bruta:1386217,liquida:820264,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Ferrada Torres, Maria F.",cargo:"MATRONA",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Planta",bruta:1948209,liquida:1222057,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Fuentes Valladares, Paula",cargo:"NUTRICIONISTA",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Planta",bruta:2321833,liquida:1896148,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Gallegos Alarcon, Nadia",cargo:"TRABAJADORA SOCIAL",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Planta",bruta:2706073,liquida:2069413,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Gallegos Guzman, Manuel",cargo:"PODÓLOGO",est:"Técnico de Salud",sector:"Salud",vinculo:"Planta",bruta:1367814,liquida:1133703,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Garrido Mellado, Mercedes",cargo:"TENS TOMA MUESTRA",est:"Técnico de Salud",sector:"Salud",vinculo:"Planta",bruta:1443997,liquida:947874,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Gonzalez de la Maza, Carlos",cargo:"CONDUCTOR",est:"Auxiliar de Salud",sector:"Salud",vinculo:"Planta",bruta:1229485,liquida:887893,hhee_d:156560,hhee_n:98637,hhee_f:0,hrs_d:40,hrs_n:21,hrs_f:0,viaticos:0},
+{nom:"Hernandez Yissi, Camila",cargo:"ODONTÓLOGA",est:"Médico/Dentista",sector:"Salud",vinculo:"Planta",bruta:2524925,liquida:2022837,hhee_d:163943,hhee_n:0,hhee_f:0,hrs_d:13,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Jerez Cid, Edison",cargo:"DIRECTOR (S) DSM",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Planta",bruta:2111107,liquida:633974,hhee_d:213744,hhee_n:0,hhee_f:0,hrs_d:24,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Loyola Villablanca, Daniela",cargo:"TRABAJADORA SOCIAL",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Planta",bruta:1948209,liquida:1605426,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Manriquez Fernandez, Jimena",cargo:"TENS ESTERILIZACIÓN",est:"Técnico de Salud",sector:"Salud",vinculo:"Planta",bruta:1733160,liquida:1287019,hhee_d:120064,hhee_n:0,hhee_f:0,hrs_d:14,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Molina Valenzuela, Jose",cargo:"CONDUCTOR",est:"Auxiliar de Salud",sector:"Salud",vinculo:"Planta",bruta:1541746,liquida:1276114,hhee_d:158304,hhee_n:195888,hhee_f:0,hrs_d:32,hrs_n:33,hrs_f:0,viaticos:0},
+{nom:"Muñoz Gatica, Viviana",cargo:"TENS CECOSF",est:"Técnico de Salud",sector:"Salud",vinculo:"Planta",bruta:1555310,liquida:749787,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Oñate Sepulveda, Ninette",cargo:"TRABAJADORA SOCIAL",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Planta",bruta:3155048,liquida:1794021,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Oyarzo Apablaza, Carlos",cargo:"TECNÓLOGO MÉDICO",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Planta",bruta:3155048,liquida:2578983,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Ramos Guzman, Alex",cargo:"ADMINISTRATIVO CECOSF",est:"Administrativo de Salud",sector:"Salud",vinculo:"Planta",bruta:1165192,liquida:985069,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Rivas Cea, Roberto",cargo:"KINESIÓLOGO SALA IRA",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Planta",bruta:3036071,liquida:2333230,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Rodriguez Alegria, Angelica",cargo:"ADMINISTRATIVA CECOSF",est:"Administrativo de Salud",sector:"Salud",vinculo:"Planta",bruta:1322619,liquida:824550,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Santander Diaz, Jose R.",cargo:"ODONTOLOGO ENC. PROGRAMA",est:"Médico/Dentista",sector:"Salud",vinculo:"Planta",bruta:2534166,liquida:1992595,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Santidrian Sime, Andres",cargo:"PSICÓLOGO ENC. SECTOR B",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Planta",bruta:2858833,liquida:2039108,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Schevach Salazar, Natacha",cargo:"SECRETARIA CESFAM",est:"Administrativo de Salud",sector:"Salud",vinculo:"Planta",bruta:1674987,liquida:1081894,hhee_d:60032,hhee_n:0,hhee_f:0,hrs_d:7,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Sepulveda Betancourt, Aracely",cargo:"TENS TOMA MUESTRA",est:"Técnico de Salud",sector:"Salud",vinculo:"Planta",bruta:1452531,liquida:1131355,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Torres Panes, Rene",cargo:"TENS CECOSF",est:"Técnico de Salud",sector:"Salud",vinculo:"Planta",bruta:1555310,liquida:759112,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Torres Ulloa, Marisol",cargo:"TENS BOX LECHE",est:"Técnico de Salud",sector:"Salud",vinculo:"Planta",bruta:1613096,liquida:1428634,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Ulloa Jara, Veronica",cargo:"ADMINISTRATIVO SOME",est:"Administrativo de Salud",sector:"Salud",vinculo:"Planta",bruta:1619180,liquida:976876,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Ulloa Salas, Miguel",cargo:"TENS PROCEDIMIENTO",est:"Técnico de Salud",sector:"Salud",vinculo:"Planta",bruta:1225798,liquida:833115,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Urrea Araya, Monica",cargo:"ENFERMERA PROCEDIMIENTOS",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Planta",bruta:3158460,liquida:2196047,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Valenzuela Villalobos, Roxana",cargo:"TENS FARMACIA",est:"Técnico de Salud",sector:"Salud",vinculo:"Planta",bruta:1487648,liquida:1246994,hhee_d:194711,hhee_n:0,hhee_f:0,hrs_d:31,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Vallejos Castillo, Irene",cargo:"ADMINISTRATIVO SOME",est:"Administrativo de Salud",sector:"Salud",vinculo:"Planta",bruta:1762944,liquida:1146749,hhee_d:145792,hhee_n:0,hhee_f:0,hrs_d:17,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Vega Riquelme, Natalia",cargo:"ENFERMERA",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Planta",bruta:2083766,liquida:1666589,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Veloso Aguilar, Marcelo",cargo:"DIRECTOR CESFAM",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Planta",bruta:3415775,liquida:2180427,hhee_d:100149,hhee_n:0,hhee_f:0,hrs_d:7,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Venturelli Benedetti, Maria P.",cargo:"ADMINISTRATIVA OIRS",est:"Administrativo de Salud",sector:"Salud",vinculo:"Planta",bruta:1113572,liquida:577718,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Yevenes Pereira, Camila",cargo:"MATRONA",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Planta",bruta:2083766,liquida:1008634,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+
+// CONTRATA MUNICIPALIDAD (25)
+{nom:"Castillo Moreno, Adrian",cargo:"AUXILIAR CULTURA",est:"Auxiliar",sector:"Municipalidad",vinculo:"Contrata",bruta:1095467,liquida:969511,hhee_d:110351,hhee_n:0,hhee_f:76142,hrs_d:40,hrs_n:0,hrs_f:23,viaticos:0},
+{nom:"Cid Guerrero, Jose",cargo:"AUXILIAR TERRENO",est:"Auxiliar",sector:"Municipalidad",vinculo:"Contrata",bruta:1120869,liquida:986789,hhee_d:35315,hhee_n:0,hhee_f:134198,hrs_d:12,hrs_n:0,hrs_f:38,viaticos:0},
+{nom:"Cortez Navarrete, Cristian",cargo:"CONTADOR",est:"Técnico",sector:"Municipalidad",vinculo:"Contrata",bruta:1311676,liquida:1115042,hhee_d:13944,hhee_n:0,hhee_f:0,hrs_d:3,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Diaz Castro, Fredy",cargo:"AUXILIAR CONDUCTOR",est:"Auxiliar",sector:"Municipalidad",vinculo:"Contrata",bruta:877509,liquida:755417,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Echeverria Muñoz, Edgardo",cargo:"ADMINISTRATIVO CULTURA",est:"Administrativo",sector:"Municipalidad",vinculo:"Contrata",bruta:1460261,liquida:1251457,hhee_d:83665,hhee_n:0,hhee_f:39044,hrs_d:18,hrs_n:0,hrs_f:7,viaticos:0},
+{nom:"Fuentes Troncoso, Karla",cargo:"INSPECTORA MUNICIPAL",est:"Administrativo",sector:"Municipalidad",vinculo:"Contrata",bruta:1115052,liquida:976122,hhee_d:30130,hhee_n:0,hhee_f:60261,hrs_d:9,hrs_n:0,hrs_f:15,viaticos:0},
+{nom:"Garces Montanares, Guillermo",cargo:"AUXILIAR CHOFER",est:"Auxiliar",sector:"Municipalidad",vinculo:"Contrata",bruta:1087988,liquida:941857,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:65830},
+{nom:"Gomez Valladares, Yasna",cargo:"ASISTENTE SOCIAL",est:"Técnico",sector:"Municipalidad",vinculo:"Contrata",bruta:1783112,liquida:1479065,hhee_d:21900,hhee_n:0,hhee_f:0,hrs_d:4,hrs_n:0,hrs_f:0,viaticos:26332},
+{nom:"Henriquez Urzua, Cristobal",cargo:"ITO",est:"Técnico",sector:"Municipalidad",vinculo:"Contrata",bruta:1503079,liquida:1251964,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Hermosilla Martinez, Manuel",cargo:"CONDUCTOR",est:"Auxiliar",sector:"Municipalidad",vinculo:"Contrata",bruta:1206720,liquida:1062014,hhee_d:0,hhee_n:0,hhee_f:92400,hrs_d:0,hrs_n:0,hrs_f:23,viaticos:92162},
+{nom:"Jara Peña, Alvaro",cargo:"AUXILIAR CONDUCTOR",est:"Auxiliar",sector:"Municipalidad",vinculo:"Contrata",bruta:1238005,liquida:1114653,hhee_d:24829,hhee_n:0,hhee_f:317810,hrs_d:9,hrs_n:0,hrs_f:96,viaticos:0},
+{nom:"Lagos Fuentes, Pedro",cargo:"ABOGADO",est:"Profesional",sector:"Municipalidad",vinculo:"Contrata",bruta:2090926,liquida:1704411,hhee_d:23513,hhee_n:0,hhee_f:0,hrs_d:3,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Letelier Figueroa, Marcelo",cargo:"AUXILIAR TERRENO",est:"Auxiliar",sector:"Municipalidad",vinculo:"Contrata",bruta:1018221,liquida:891024,hhee_d:33105,hhee_n:0,hhee_f:76142,hrs_d:12,hrs_n:0,hrs_f:23,viaticos:0},
+{nom:"Lopez Olguin, Patricia",cargo:"CONDUCTORA",est:"Auxiliar",sector:"Municipalidad",vinculo:"Contrata",bruta:1494670,liquida:1336468,hhee_d:40174,hhee_n:0,hhee_f:401739,hrs_d:12,hrs_n:0,hrs_f:100,viaticos:26332},
+{nom:"Muñoz Navarrete, Susana",cargo:"ENC. ASISTENCIA SOCIAL",est:"Técnico",sector:"Municipalidad",vinculo:"Contrata",bruta:1795179,liquida:1482798,hhee_d:21900,hhee_n:0,hhee_f:0,hrs_d:4,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Musre Contreras, Gilberto",cargo:"ENC. SEGURIDAD CIUDADANA",est:"Administrativo",sector:"Municipalidad",vinculo:"Contrata",bruta:1911859,liquida:1606632,hhee_d:93074,hhee_n:0,hhee_f:407336,hrs_d:17,hrs_n:0,hrs_f:62,viaticos:0},
+{nom:"Navarrete Vivallo, Dayana",cargo:"AUXILIAR CONDUCTOR",est:"Auxiliar",sector:"Municipalidad",vinculo:"Contrata",bruta:992874,liquida:874066,hhee_d:24829,hhee_n:0,hhee_f:46347,hrs_d:9,hrs_n:0,hrs_f:14,viaticos:26332},
+{nom:"Oñatt Garrido, Juan",cargo:"CONDUCTOR",est:"Auxiliar",sector:"Municipalidad",vinculo:"Contrata",bruta:1081384,liquida:954187,hhee_d:33105,hhee_n:0,hhee_f:125800,hrs_d:12,hrs_n:0,hrs_f:38,viaticos:0},
+{nom:"Perez Leiva, Mirta",cargo:"SECRETARIA SECMUN",est:"Administrativo",sector:"Municipalidad",vinculo:"Contrata",bruta:1200431,liquida:1139426,hhee_d:103026,hhee_n:0,hhee_f:59684,hrs_d:29,hrs_n:0,hrs_f:14,viaticos:0},
+{nom:"Reyes Garces, Andrea",cargo:"AUXILIAR CHOFER",est:"Auxiliar",sector:"Municipalidad",vinculo:"Contrata",bruta:1092340,liquida:974596,hhee_d:91039,hhee_n:0,hhee_f:79453,hrs_d:33,hrs_n:0,hrs_f:24,viaticos:32530},
+{nom:"Rios Montanares, Alexandra",cargo:"ADMINISTRATIVO JPL",est:"Administrativo",sector:"Municipalidad",vinculo:"Contrata",bruta:1043160,liquida:904230,hhee_d:6696,hhee_n:0,hhee_f:16070,hrs_d:2,hrs_n:0,hrs_f:4,viaticos:0},
+{nom:"Ruiz Cea, Victor",cargo:"CONTABILIDAD",est:"Profesional",sector:"Municipalidad",vinculo:"Contrata",bruta:1963656,liquida:1632063,hhee_d:78596,hhee_n:0,hhee_f:31438,hrs_d:12,hrs_n:0,hrs_f:4,viaticos:0},
+{nom:"Varela Toloza, Sara",cargo:"ADMINISTRATIVO TRÁNSITO",est:"Administrativo",sector:"Municipalidad",vinculo:"Contrata",bruta:928182,liquida:803562,hhee_d:19311,hhee_n:0,hhee_f:0,hrs_d:7,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Vergara Vergara, Manuel",cargo:"ENC. PERMISOS CIRCULACIÓN",est:"Técnico",sector:"Municipalidad",vinculo:"Contrata",bruta:1397724,liquida:1169261,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Vial Vial, Cristian",cargo:"INSPECTOR MUNICIPAL",est:"Administrativo",sector:"Municipalidad",vinculo:"Contrata",bruta:1119254,liquida:1064335,hhee_d:56913,hhee_n:0,hhee_f:76331,hrs_d:17,hrs_n:0,hrs_f:19,viaticos:0},
+
+// CONTRATA EDUCACIÓN (36)
+{nom:"Acevedo Caceres, Maria C.",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:1674142,liquida:840993,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Acuña Seguel, Carlos",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:628501,liquida:518011,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Aranda Ortiz, Scarlette",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:1533227,liquida:1226770,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Barrales Riquelme, Rocio",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:1744156,liquida:1382065,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Catrian Rodriguez, Jaime",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:1202675,liquida:758792,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Contreras Seguel, Barbara",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:1591181,liquida:926615,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Correa Fuentes, Marla",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:1252205,liquida:759307,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Cuevas Erices, Cesar",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:2450913,liquida:1936496,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Espinoza Herrera, Maria F.",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:1686609,liquida:1372980,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Flores Schevach, Karen",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:1464562,liquida:672771,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Gallegos Gaete, Kiara",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:1466578,liquida:1194314,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Gomez Correa, Abigail",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:2083662,liquida:1607748,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Gonzalez Escobar, Ignacio",cargo:"DIRECTOR DAEM",est:"Docente-directivo",sector:"Educación",vinculo:"Contrata",bruta:3607531,liquida:2819032,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Guevara Ponce, Alexandra",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:447062,liquida:276625,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Inostroza Sepulveda, Daniela",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:1464565,liquida:840827,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Jara Godoy, Carin",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:1909271,liquida:1433021,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Laporte Sepulveda, Jeanette",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:1783502,liquida:1424790,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Luna Garrido, Danny",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:1779188,liquida:1430652,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Machmar Valeria, Vania",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:2514141,liquida:1443878,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Montoya Vargas, Sergio",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:1518603,liquida:970758,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Mora Araya, Francisca",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:1297522,liquida:1033165,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Moreno Bascur, Cristopher",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:439719,liquida:304757,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Moroni Soto, Gianina",cargo:"JEFE UTP",est:"Docente-directivo",sector:"Educación",vinculo:"Contrata",bruta:2142159,liquida:1304118,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Obreque Aravena, Jocelyn",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:267787,liquida:226501,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Oses Echaurren, Matias",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:1376852,liquida:768975,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Paz Toloza, Fabiola",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:1600899,liquida:1077271,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Perret Aguilera, Emilio",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:754292,liquida:615126,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Poblete Quiroz, Yennifer",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:843303,liquida:689232,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Quijon Venegas, Sandra",cargo:"DOCENTE",est:"Docente-directivo",sector:"Educación",vinculo:"Contrata",bruta:2472616,liquida:1973589,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Rojas Rojas, Jacqueline",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:1840769,liquida:1005104,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Rubio Cisterna, Hugo",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:444549,liquida:366398,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Soto Espinoza, Ximena",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:1438854,liquida:1949545,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Tapia Alveal, Scarlette",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:1678022,liquida:1144685,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Vasquez Robles, Ximena",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:1533227,liquida:1122357,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Velasquez Lopez, Luis",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:1850298,liquida:1486329,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Venegas Arellano, Mario",cargo:"DOCENTE",est:"Docente",sector:"Educación",vinculo:"Contrata",bruta:1648510,liquida:1055970,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+
+// CONTRATA SALUD (55)
+{nom:"Aburto Rubilar, Juaquin",cargo:"PROF. INFORMÁTICA",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Contrata",bruta:1946353,liquida:1591153,hhee_d:124553,hhee_n:0,hhee_f:0,hrs_d:13,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Aguilera Amaya, Monica",cargo:"TRABAJADORA SOCIAL",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Contrata",bruta:1460996,liquida:1083684,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Aguilera Cayuman, Marcelo",cargo:"CONDUCTOR",est:"Auxiliar de Salud",sector:"Salud",vinculo:"Contrata",bruta:775201,liquida:517000,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Alvarado Martinez, Rodrigo",cargo:"ENFERMERO",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Contrata",bruta:1436610,liquida:1202497,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Aranguiz Bilz, Kiara",cargo:"TENS",est:"Técnico de Salud",sector:"Salud",vinculo:"Contrata",bruta:1103531,liquida:775723,hhee_d:106789,hhee_n:0,hhee_f:0,hrs_d:23,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Astete Tobar, Carolina",cargo:"ADMINISTRATIVO",est:"Administrativo de Salud",sector:"Salud",vinculo:"Contrata",bruta:158570,liquida:133379,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Bastias Garces, Franco",cargo:"TÉCNICO ADMINISTRACIÓN",est:"Técnico de Salud",sector:"Salud",vinculo:"Contrata",bruta:1061658,liquida:660913,hhee_d:51689,hhee_n:0,hhee_f:0,hrs_d:11,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Bilz Mariangel, Carol",cargo:"TENS EN ENFERMERÍA",est:"Técnico de Salud",sector:"Salud",vinculo:"Contrata",bruta:1166923,liquida:989602,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Borquez Acuña, Francisca",cargo:"PROF. ADQUISICIONES",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Contrata",bruta:1785116,liquida:1459784,hhee_d:230468,hhee_n:0,hhee_f:0,hrs_d:28,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Cabezas Paredes, Jorge",cargo:"CONDUCTOR",est:"Auxiliar de Salud",sector:"Salud",vinculo:"Contrata",bruta:1066476,liquida:761457,hhee_d:135920,hhee_n:73404,hhee_f:0,hrs_d:40,hrs_n:18,hrs_f:0,viaticos:0},
+{nom:"Campos Poblete, Claudia",cargo:"AUXILIAR DE SERVICIOS",est:"Auxiliar de Salud",sector:"Salud",vinculo:"Contrata",bruta:729696,liquida:471845,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Cerda Benavides, Fernanda",cargo:"MATRONA",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Contrata",bruta:674180,liquida:568941,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Chavez Gonzalez, Constanza",cargo:"TENS EN ENFERMERÍA",est:"Técnico de Salud",sector:"Salud",vinculo:"Contrata",bruta:879076,liquida:749840,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Cid Gonzalez, Ignacio",cargo:"ADMINISTRATIVO",est:"Administrativo de Salud",sector:"Salud",vinculo:"Contrata",bruta:854220,liquida:735946,hhee_d:46293,hhee_n:0,hhee_f:0,hrs_d:13,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Contreras Caro, Rosa",cargo:"AUXILIAR DE SERVICIOS",est:"Auxiliar de Salud",sector:"Salud",vinculo:"Contrata",bruta:774343,liquida:662109,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Cordova Garces, Bernarda",cargo:"TÉCNICO ADMINISTRACIÓN",est:"Técnico de Salud",sector:"Salud",vinculo:"Contrata",bruta:1114076,liquida:930755,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Diaz Ulloa, Jorge",cargo:"CONDUCTOR",est:"Auxiliar de Salud",sector:"Salud",vinculo:"Contrata",bruta:1019519,liquida:887805,hhee_d:109680,hhee_n:0,hhee_f:0,hrs_d:30,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Donoso Montoya, Alejandra",cargo:"ENFERMERA",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Contrata",bruta:1842182,liquida:1258498,hhee_d:80154,hhee_n:0,hhee_f:0,hrs_d:9,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Escobar Soto, Mirza",cargo:"TENS EN ENFERMERÍA",est:"Técnico de Salud",sector:"Salud",vinculo:"Contrata",bruta:1281406,liquida:1086855,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Figueroa Gonzalez, Martin",cargo:"ODONTÓLOGO",est:"Médico/Dentista",sector:"Salud",vinculo:"Contrata",bruta:2228970,liquida:1767596,hhee_d:32502,hhee_n:0,hhee_f:0,hrs_d:3,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Flores Paredes, Jocelin",cargo:"ADMINISTRATIVO",est:"Técnico de Salud",sector:"Salud",vinculo:"Contrata",bruta:936708,liquida:492865,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Garrido Vallejos, Juan A.",cargo:"TENS ENFERMERÍA",est:"Técnico de Salud",sector:"Salud",vinculo:"Contrata",bruta:1472536,liquida:1311316,hhee_d:198800,hhee_n:214704,hhee_f:0,hrs_d:40,hrs_n:36,hrs_f:0,viaticos:0},
+{nom:"Garrido Vergara, Alex",cargo:"TENS ENFERMERÍA",est:"Técnico de Salud",sector:"Salud",vinculo:"Contrata",bruta:795967,liquida:653060,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Gonzalez Avila, Fernanda",cargo:"ENFERMERA",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Contrata",bruta:555537,liquida:466992,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Guevara Puentes, Alex",cargo:"CONDUCTOR",est:"Auxiliar de Salud",sector:"Salud",vinculo:"Contrata",bruta:1084936,liquida:953289,hhee_d:146240,hhee_n:21935,hhee_f:0,hrs_d:40,hrs_n:5,hrs_f:0,viaticos:0},
+{nom:"Henriquez Reveco, Jordana",cargo:"TENS ENFERMERÍA",est:"Técnico de Salud",sector:"Salud",vinculo:"Contrata",bruta:1005741,liquida:859997,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Jimenez Isla, Miguel",cargo:"CONDUCTOR",est:"Auxiliar de Salud",sector:"Salud",vinculo:"Contrata",bruta:106547,liquida:88612,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Manriquez Elgueta, Isabel",cargo:"ADMINISTRATIVO",est:"Técnico de Salud",sector:"Salud",vinculo:"Contrata",bruta:1221396,liquida:1053822,hhee_d:50634,hhee_n:0,hhee_f:0,hrs_d:9,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Martinez Castillo, Jeannette",cargo:"TENS EN ENFERMERÍA",est:"Técnico de Salud",sector:"Salud",vinculo:"Contrata",bruta:1225798,liquida:1012496,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Molina Castillo, Sonia",cargo:"AUXILIAR DE SERVICIO",est:"Auxiliar de Salud",sector:"Salud",vinculo:"Contrata",bruta:675039,liquida:581221,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Molina Rojas, Karem",cargo:"ADMINISTRATIVO",est:"Administrativo de Salud",sector:"Salud",vinculo:"Contrata",bruta:803923,liquida:657585,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Muñoz Garcia, Claudia",cargo:"NUTRICIONISTA",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Contrata",bruta:1007708,liquida:872154,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Muñoz Garrido, Ivan",cargo:"MÉDICO CIRUJANO",est:"Médico/Dentista",sector:"Salud",vinculo:"Contrata",bruta:3454647,liquida:3147309,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Orellana Ruiz, Daniela",cargo:"ENFERMERA",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Contrata",bruta:1742330,liquida:1440295,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Orrego Vasquez, Valentina",cargo:"ADMINISTRADORA PÚBLICA",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Contrata",bruta:1511430,liquida:1288077,hhee_d:75560,hhee_n:0,hhee_f:0,hrs_d:10,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Ortega Cuevas, German",cargo:"TENS ENFERMERÍA",est:"Técnico de Salud",sector:"Salud",vinculo:"Contrata",bruta:1059014,liquida:899611,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Pacheco Arriagada, Beatriz",cargo:"AUXILIAR DE SERVICIO",est:"Auxiliar de Salud",sector:"Salud",vinculo:"Contrata",bruta:568760,liquida:462485,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Pacheco Arriagada, Sandro",cargo:"ENC. CONVENIOS",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Contrata",bruta:2574119,liquida:1407165,hhee_d:129570,hhee_n:0,hhee_f:0,hrs_d:10,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Paredes Pereira, Camila",cargo:"TENS",est:"Técnico de Salud",sector:"Salud",vinculo:"Contrata",bruta:1067282,liquida:913615,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Peña Molina, Nineth",cargo:"TRABAJADORA SOCIAL",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Contrata",bruta:79631,liquida:67901,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Quiñones Cifuentes, Cecilia",cargo:"ADMINISTRATIVO",est:"Administrativo de Salud",sector:"Salud",vinculo:"Contrata",bruta:1050879,liquida:746590,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Quiñones Cifuentes, Yarixa",cargo:"TENS ENFERMERÍA",est:"Técnico de Salud",sector:"Salud",vinculo:"Contrata",bruta:1137238,liquida:954003,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Quiñones Navarro, Jose L.",cargo:"CONDUCTOR",est:"Auxiliar de Salud",sector:"Salud",vinculo:"Contrata",bruta:1021057,liquida:719263,hhee_d:94200,hhee_n:113040,hhee_f:0,hrs_d:30,hrs_n:30,hrs_f:0,viaticos:0},
+{nom:"Ramos Albornoz, Maria N.",cargo:"FINANZAS",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Contrata",bruta:2562282,liquida:1581595,hhee_d:129570,hhee_n:0,hhee_f:0,hrs_d:10,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Reyes Albornoz, Jonathan",cargo:"QUÍMICO FARMACÉUTICO",est:"Médico/Dentista",sector:"Salud",vinculo:"Contrata",bruta:2044660,liquida:1337900,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Saavedra Troncoso, Andres",cargo:"MÉDICO CIRUJANO",est:"Médico/Dentista",sector:"Salud",vinculo:"Contrata",bruta:3476238,liquida:3147584,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Sepulveda Betancourt, Ninoska",cargo:"KINESIÓLOGO",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Contrata",bruta:1955801,liquida:1587918,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Sepulveda Medina, Marcelo",cargo:"AUXILIAR DE SERVICIO",est:"Auxiliar de Salud",sector:"Salud",vinculo:"Contrata",bruta:1799899,liquida:1480653,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Torres Torres, Olga",cargo:"TENS EN ENFERMERÍA",est:"Técnico de Salud",sector:"Salud",vinculo:"Contrata",bruta:1788404,liquida:1226324,hhee_d:264360,hhee_n:166551,hhee_f:0,hrs_d:40,hrs_n:21,hrs_f:0,viaticos:0},
+{nom:"Vargas Chavez, Ignacia",cargo:"MATRONA",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Contrata",bruta:1460996,liquida:1229447,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Vega Arancibia, Fernanda",cargo:"ADMINISTRATIVO",est:"Administrativo de Salud",sector:"Salud",vinculo:"Contrata",bruta:803923,liquida:701345,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Vera Stuardo, Constanza",cargo:"TENS ENFERMERÍA",est:"Técnico de Salud",sector:"Salud",vinculo:"Contrata",bruta:1118762,liquida:953127,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Vergara Rivas, Daniel",cargo:"CONDUCTOR",est:"Auxiliar de Salud",sector:"Salud",vinculo:"Contrata",bruta:859185,liquida:608034,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+{nom:"Yichi San Martin, Anais",cargo:"ENFERMERA",est:"Otro Profesional Salud",sector:"Salud",vinculo:"Contrata",bruta:1591027,liquida:1321805,hhee_d:0,hhee_n:0,hhee_f:0,hrs_d:0,hrs_n:0,hrs_f:0,viaticos:0},
+];
+
+// ═══════════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════════
+const fmt = n => n > 0 ? '$ ' + n.toLocaleString('es-CL') : '–';
+const M   = n => (n/1e6).toFixed(2);
+const pct = (a,b) => b>0 ? ((a/b)*100).toFixed(1)+'%' : '–';
+const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+const sum = arr => arr.reduce((a,b)=>a+b,0);
+
+const colorMap = { Municipalidad: '#3b82f6', Educación: '#10b981', Salud: '#f59e0b' };
+const vcMap    = { Planta: '#6366f1', Contrata: '#ec4899' };
+
+Chart.defaults.color = '#94a3b8';
+Chart.defaults.borderColor = '#334155';
+const GRID = { color: '#1e3a5f33' };
+
+// ── KPIs ──
+const kpis = [
+  { l: 'Total funcionarios', v: data.length.toString(), s: '36 Planta Muni · 81 Planta Edu · 42 Planta Salud · 25+36+55 Contrata' },
+  { l: 'Masa bruta mensual', v: '$ '+M(sum(data.map(d=>d.bruta)))+' M', s: 'Suma total remuneraciones brutas' },
+  { l: 'Masa líquida mensual', v: '$ '+M(sum(data.map(d=>d.liquida)))+' M', s: 'Suma total remuneraciones líquidas' },
+  { l: 'Promedio bruto global', v: '$ '+Math.round(avg(data.map(d=>d.bruta))).toLocaleString('es-CL'), s: 'Todos los sectores y vínculos' },
+  { l: 'Total HH.EE. brutas', v: '$ '+M(sum(data.map(d=>d.hhee_d+d.hhee_n+d.hhee_f)))+' M', s: 'Incluido en remuneración bruta' },
+  { l: 'Total viáticos', v: '$ '+sum(data.map(d=>d.viaticos)).toLocaleString('es-CL'), s: 'No incluido en remuneración bruta' },
+  { l: 'Descuento promedio', v: pct(sum(data.map(d=>d.bruta-d.liquida)),sum(data.map(d=>d.bruta))), s: 'Bruta → Líquida (global)' },
+  { l: 'Funcionarios con HH.EE.', v: data.filter(d=>d.hhee_d+d.hhee_n+d.hhee_f>0).length.toString(), s: 'de '+data.length+' funcionarios totales' },
+];
+document.getElementById('kpiGrid').innerHTML = kpis.map(k=>
+  `<div class="kpi"><div class="kpi-label">${k.l}</div><div class="kpi-value">${k.v}</div><div class="kpi-sub">${k.s}</div></div>`
+).join('');
+
+// ── Chart: Masa por sector ──
+{
+  const sectors = ['Municipalidad','Educación','Salud'];
+  const plantaB = sectors.map(s=>sum(data.filter(d=>d.sector===s&&d.vinculo==='Planta').map(d=>d.bruta))/1e6);
+  const contratB= sectors.map(s=>sum(data.filter(d=>d.sector===s&&d.vinculo==='Contrata').map(d=>d.bruta))/1e6);
+  new Chart(document.getElementById('cSector'),{type:'bar',data:{labels:sectors,datasets:[
+    {label:'Planta',data:plantaB,backgroundColor:'#6366f1bb',borderColor:'#6366f1',borderWidth:1},
+    {label:'Contrata',data:contratB,backgroundColor:'#ec4899bb',borderColor:'#ec4899',borderWidth:1},
+  ]},options:{responsive:true,plugins:{legend:{labels:{boxWidth:12}}},scales:{x:{grid:GRID},y:{grid:GRID,ticks:{callback:v=>'$'+v.toFixed(1)+'M'}}}}});
+}
+
+// ── Chart: Planta vs Contrata promedio bruto ──
+{
+  const sectors=['Municipalidad','Educación','Salud'];
+  const pPl=sectors.map(s=>avg(data.filter(d=>d.sector===s&&d.vinculo==='Planta').map(d=>d.bruta))/1e6);
+  const pCo=sectors.map(s=>avg(data.filter(d=>d.sector===s&&d.vinculo==='Contrata').map(d=>d.bruta))/1e6);
+  new Chart(document.getElementById('cPvsC'),{type:'bar',data:{labels:sectors,datasets:[
+    {label:'Planta (prom.)',data:pPl,backgroundColor:'#6366f1bb',borderColor:'#6366f1',borderWidth:1},
+    {label:'Contrata (prom.)',data:pCo,backgroundColor:'#ec4899bb',borderColor:'#ec4899',borderWidth:1},
+  ]},options:{responsive:true,plugins:{legend:{labels:{boxWidth:12}}},scales:{x:{grid:GRID},y:{grid:GRID,ticks:{callback:v=>'$'+v.toFixed(2)+'M'}}}}});
+}
+
+// ── Chart: Estamento (donut) ──
+{
+  const counts={};
+  data.forEach(d=>{ counts[d.est]=(counts[d.est]||0)+1; });
+  const labels=Object.keys(counts).sort((a,b)=>counts[b]-counts[a]);
+  const vals=labels.map(l=>counts[l]);
+  const palette=['#3b82f6','#10b981','#f59e0b','#ec4899','#6366f1','#14b8a6','#f97316','#a855f7','#ef4444','#84cc16'];
+  new Chart(document.getElementById('cEstamento'),{type:'doughnut',data:{labels,datasets:[{data:vals,backgroundColor:palette,borderWidth:1,borderColor:'#0f172a'}]},
+    options:{responsive:true,plugins:{legend:{position:'right',labels:{boxWidth:12,padding:8,font:{size:10}}}}}});
+}
+
+// ── Chart: Brecha bruta→líquida ──
+{
+  const sectors=['Municipalidad','Educación','Salud'];
+  const vinculos=['Planta','Contrata'];
+  const datasets=vinculos.map((v,i)=>({
+    label:v,
+    data:sectors.map(s=>{
+      const grp=data.filter(d=>d.sector===s&&d.vinculo===v);
+      const brt=sum(grp.map(d=>d.bruta));
+      const liq=sum(grp.map(d=>d.liquida));
+      return brt>0?((brt-liq)/brt*100).toFixed(1):0;
+    }),
+    backgroundColor:i===0?'#6366f1bb':'#ec4899bb',
+    borderColor:i===0?'#6366f1':'#ec4899',
+    borderWidth:1
+  }));
+  new Chart(document.getElementById('cBrecha'),{type:'bar',data:{labels:sectors,datasets},
+    options:{responsive:true,plugins:{legend:{labels:{boxWidth:12}}},scales:{x:{grid:GRID},y:{grid:GRID,ticks:{callback:v=>v+'%'},max:55,title:{display:true,text:'% descuento sobre bruta'}}}}});
+}
+
+// ── Chart: Costo HH.EE. por sector ──
+{
+  const sectors=['Municipalidad','Educación','Salud'];
+  const dD=sectors.map(s=>sum(data.filter(d=>d.sector===s).map(d=>d.hhee_d))/1e6);
+  const dN=sectors.map(s=>sum(data.filter(d=>d.sector===s).map(d=>d.hhee_n))/1e6);
+  const dF=sectors.map(s=>sum(data.filter(d=>d.sector===s).map(d=>d.hhee_f))/1e6);
+  new Chart(document.getElementById('cHoras'),{type:'bar',data:{labels:sectors,datasets:[
+    {label:'Diurnas',data:dD,backgroundColor:'#3b82f6bb',borderColor:'#3b82f6',borderWidth:1},
+    {label:'Nocturnas',data:dN,backgroundColor:'#f59e0bbb',borderColor:'#f59e0b',borderWidth:1},
+    {label:'Festivas',data:dF,backgroundColor:'#ec4899bb',borderColor:'#ec4899',borderWidth:1},
+  ]},options:{responsive:true,plugins:{legend:{labels:{boxWidth:12}}},scales:{x:{stacked:true,grid:GRID},y:{stacked:true,grid:GRID,ticks:{callback:v=>'$'+v.toFixed(2)+'M'}}}}});
+}
+
+// ── Table: Top HH.EE. ──
+{
+  const withHH=data.map(d=>({...d,totalHH:d.hhee_d+d.hhee_n+d.hhee_f,totalHrs:d.hrs_d+d.hrs_n+d.hrs_f}))
+    .filter(d=>d.totalHH>0).sort((a,b)=>b.totalHH-a.totalHH).slice(0,15);
+  const tbody=document.querySelector('#tHoras tbody');
+  tbody.innerHTML=withHH.map(d=>`<tr>
+    <td>${d.nom}</td>
+    <td><span class="chip chip-${d.sector==='Municipalidad'?'muni':d.sector==='Educación'?'edu':'salud'}">${d.sector}</span></td>
+    <td class="num">${fmt(d.totalHH)}</td>
+    <td class="num">${d.totalHrs} hrs</td>
+  </tr>`).join('');
+}
+
+// ── Table: Top bruta ──
+{
+  const top15=data.sort((a,b)=>b.bruta-a.bruta).slice(0,15);
+  const tbody=document.querySelector('#tTop tbody');
+  tbody.innerHTML=top15.map(d=>`<tr>
+    <td>${d.nom}</td>
+    <td style="color:var(--muted);font-size:.75rem">${d.cargo}</td>
+    <td><span class="chip chip-${d.sector==='Municipalidad'?'muni':d.sector==='Educación'?'edu':'salud'}">${d.sector}</span></td>
+    <td class="num">${fmt(d.bruta)}</td>
+    <td class="num">${fmt(d.liquida)}</td>
+  </tr>`).join('');
+}
+
+// ── Chart: Dispersión salarial por estamento ──
+{
+  const estMap={};
+  data.forEach(d=>{if(!estMap[d.est])estMap[d.est]=[];estMap[d.est].push(d.bruta);});
+  const labels=Object.keys(estMap).sort((a,b)=>avg(estMap[b])-avg(estMap[a]));
+  const avgs=labels.map(l=>avg(estMap[l])/1e6);
+  const mins=labels.map(l=>Math.min(...estMap[l])/1e6);
+  const maxs=labels.map(l=>Math.max(...estMap[l])/1e6);
+  new Chart(document.getElementById('cDispersion'),{type:'bar',data:{labels,datasets:[
+    {label:'Promedio bruto',data:avgs,backgroundColor:'#3b82f6aa',borderColor:'#3b82f6',borderWidth:1},
+    {label:'Mínimo',data:mins,backgroundColor:'#10b98155',borderColor:'#10b981',borderWidth:1},
+    {label:'Máximo',data:maxs,backgroundColor:'#f59e0b55',borderColor:'#f59e0b',borderWidth:1},
+  ]},options:{responsive:true,indexAxis:'y',plugins:{legend:{labels:{boxWidth:12}}},
+    scales:{x:{grid:GRID,ticks:{callback:v=>'$'+v.toFixed(1)+'M'}},y:{grid:GRID,ticks:{font:{size:9}}}}}});
+}
+
+// ── Table: Viáticos ──
+{
+  const con=data.filter(d=>d.viaticos>0).sort((a,b)=>b.viaticos-a.viaticos);
+  const tbody=document.querySelector('#tViaticos tbody');
+  tbody.innerHTML=con.map(d=>`<tr>
+    <td>${d.nom}</td>
+    <td style="color:var(--muted);font-size:.75rem">${d.cargo}</td>
+    <td><span class="chip chip-${d.sector==='Municipalidad'?'muni':d.sector==='Educación'?'edu':'salud'}">${d.sector}</span></td>
+    <td class="num">${fmt(d.viaticos)}</td>
+  </tr>`).join('');
+}
+
+// ── Chart: Duración contratos vigentes Municipalidad ──
+{
+  const contratas=[
+    {nom:'Castillo',inicio:2012},
+    {nom:'Cid G.',inicio:1997},
+    {nom:'Cortez',inicio:2024},
+    {nom:'Diaz C.',inicio:2026},
+    {nom:'Echeverria',inicio:2017},
+    {nom:'Fuentes T.',inicio:2019},
+    {nom:'Garces',inicio:2022},
+    {nom:'Gomez V.',inicio:2023},
+    {nom:'Henriquez U.',inicio:2021},
+    {nom:'Hermosilla',inicio:2023},
+    {nom:'Jara P.',inicio:2023},
+    {nom:'Lagos F.',inicio:2026},
+    {nom:'Letelier',inicio:2014},
+    {nom:'Lopez O.',inicio:2022},
+    {nom:'Muñoz N.',inicio:2011},
+    {nom:'Musre G.',inicio:2021},
+    {nom:'Navarrete V.',inicio:2023},
+    {nom:'Oñatt',inicio:2014},
+    {nom:'Perez L.',inicio:2023},
+    {nom:'Reyes G.',inicio:2025},
+    {nom:'Rios M.',inicio:2025},
+    {nom:'Ruiz C.',inicio:2024},
+    {nom:'Varela',inicio:2023},
+    {nom:'Vergara V.',inicio:2019},
+    {nom:'Vial V.',inicio:2023},
+  ].map(c=>({...c,años:2026-c.inicio})).sort((a,b)=>b.años-a.años);
+
+  const buckets={'< 1 año':0,'1-3 años':0,'4-7 años':0,'8-12 años':0,'> 12 años':0};
+  contratas.forEach(c=>{
+    if(c.años<1)buckets['< 1 año']++;
+    else if(c.años<=3)buckets['1-3 años']++;
+    else if(c.años<=7)buckets['4-7 años']++;
+    else if(c.años<=12)buckets['8-12 años']++;
+    else buckets['> 12 años']++;
+  });
+  new Chart(document.getElementById('cContratos'),{type:'pie',data:{
+    labels:Object.keys(buckets),
+    datasets:[{data:Object.values(buckets),backgroundColor:['#10b981','#3b82f6','#6366f1','#f59e0b','#ec4899'],borderColor:'#0f172a',borderWidth:2}]
+  },options:{responsive:true,plugins:{legend:{position:'right',labels:{boxWidth:12}}}}});
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  ANOMALÍAS
+// ═══════════════════════════════════════════════════════════════
+const anomalias = [
+  {
+    nivel: 'CRÍTICA',
+    color: '#ef4444',
+    bg: '#450a0a',
+    icono: '🔴',
+    titulo: 'Remuneración LÍQUIDA mayor que la BRUTA',
+    detalle: 'SOTO ESPINOZA, Ximena (Contrata Educación – DOCENTE): Bruta $1.438.854 → Líquida $1.949.545. La líquida supera a la bruta en $510.691. Matemáticamente imposible en condiciones normales: podría indicar un error de carga, un reintegro no separado, o un pago indebido que debe auditarse.',
+  },
+  {
+    nivel: 'CRÍTICA',
+    color: '#ef4444',
+    bg: '#450a0a',
+    icono: '🔴',
+    titulo: 'Sin derecho a HH.EE. pero con pago de horas extras registrado',
+    detalle: 'DIAZ GARCES, Jacqueline (Planta Municipalidad – ENCARGADA DE REMUNERACIONES): La columna "Derecho a horas extraordinarias" dice "No", pero el mes informa $90.391 por 27 horas diurnas. La funcionaria es precisamente quien administra remuneraciones, lo que agrava el riesgo.',
+  },
+  {
+    nivel: 'ALTA',
+    color: '#f97316',
+    bg: '#431407',
+    icono: '🟠',
+    titulo: 'Contratos vencidos el 31/01/2026 que reciben pago en febrero',
+    detalle: 'GOMEZ VALLADARES, Yasna (Contrata Municipalidad – Asistente Social): contrato 04/05/2023 al 31/01/2026. MUÑOZ NAVARRETE, Susana (Contrata Municipalidad – Enc. Asistencia Social): contrato 01/12/2011 al 31/01/2026. Ambas tienen fecha de término el 31 de enero pero aparecen percibiendo remuneración en el informe de febrero. Podría ser un pago de finiquito o una prórroga tácita no reflejada, pero debe documentarse.',
+  },
+  {
+    nivel: 'ALTA',
+    color: '#f97316',
+    bg: '#431407',
+    icono: '🟠',
+    titulo: 'Volumen extremo de horas festivas en febrero (28 días)',
+    detalle: 'LOPEZ OLGUIN, Patricia (Contrata Municipalidad – Conductora): 100 horas festivas + 12 diurnas = 112 horas extras totales en un mes de 28 días (≈ 4 hrs extras festivas por día calendario, incluyendo días hábiles). JARA PEÑA, Alvaro: 96 hrs festivas + 9 diurnas = 105 hrs. MUSRE CONTRERAS, Gilberto: 62 hrs festivas + 17 diurnas = 79 hrs. Este volumen supera los límites razonables y amerita verificar los registros de asistencia físicos.',
+  },
+  {
+    nivel: 'ALTA',
+    color: '#f97316',
+    bg: '#431407',
+    icono: '🟠',
+    titulo: 'Posible conflicto de interés: apellido del Alcalde en nómina de contrata',
+    detalle: 'MUSRE CONTRERAS, Claudio es el Alcalde (Planta, $6.720.854 bruto). MUSRE CONTRERAS, Gilberto es funcionario de contrata (ENC. SEGURIDAD CIUDADANA, $1.911.859 bruto), con 62 hrs festivas extras declaradas este mes. Comparten ambos apellidos. Si existe vínculo de parentesco, correspondería declaración de intereses y verificar que el nombramiento cumplió el proceso de selección.',
+  },
+  {
+    nivel: 'MEDIA',
+    color: '#eab308',
+    bg: '#422006',
+    icono: '🟡',
+    titulo: 'Apellidos familiares repetidos en distintos estamentos del mismo municipio',
+    detalle: 'SCHEVACH: Schevach Garay, Cristian (Planta Educación, $3.103.685) + Schevach Salazar, Natacha (Planta Salud, $1.674.987) + Flores Schevach, Karen (Contrata Educación, $1.464.562). OSES ECHAURREN: Pablo (Planta Educación) + Matias (Contrata Educación). GUTIERREZ RIFFO: Hector (Planta Educación) + Irene (Planta Educación). QUIÑONES CIFUENTES: Cecilia (Contrata Salud Admin) + Yarixa (Contrata Salud TENS). No es necesariamente irregular, pero la Ley N°18.575 exige declarar los vínculos.',
+  },
+  {
+    nivel: 'MEDIA',
+    color: '#eab308',
+    bg: '#422006',
+    icono: '🟡',
+    titulo: 'Descuentos previsionales superiores al 60% sobre bruta en Educación',
+    detalle: 'Varios docentes de Planta Educación muestran brechas bruta→líquida que superan el 60%: JIMENEZ CARRASCO, Jessica ($1.224.743 bruta / $230.069 líquida = 81,2% descuento). URRUTIA TRONCOSO, Rina ($1.816.414 / $446.257 = 75,4%). BRAVO NARBONA, Elizabeth ($1.838.926 / $688.776 = 62,6%). MELLADO VASQUEZ, Marcia ($1.439.409 / $505.093 = 64,9%). Los descuentos legales normales (AFP, Salud, impuesto) no superan el 25-30%. Estos valores sugieren embargos judiciales, descuentos por anticipos u otros compromisos que deben verificarse.',
+  },
+  {
+    nivel: 'MEDIA',
+    color: '#eab308',
+    bg: '#422006',
+    icono: '🟡',
+    titulo: 'Contratos a honorarios/contrata con antigüedad de planta (décadas)',
+    detalle: 'CID GUERRERO, Jose (Contrata Municipalidad – Auxiliar Terreno): en contrata desde 25/08/1997, es decir 28 años consecutivos. MUÑOZ NAVARRETE, Susana: desde 01/12/2011 (14 años). La jurisprudencia de la Contraloría General considera que la continuidad prolongada en contrata puede generar derechos de estabilidad similares a la planta y expone a la municipalidad a demandas por despido injustificado.',
+  },
+  {
+    nivel: 'INFORMATIVA',
+    color: '#60a5fa',
+    bg: '#0c1a2e',
+    icono: '🔵',
+    titulo: 'Director (S) DSM con descuento atípico: 70% de la bruta',
+    detalle: 'JEREZ CID, Edison (Planta Salud – DIRECTOR (S) DSM): Bruta $2.111.107 / Líquida $633.974. Descuento del 70%. Además tiene $213.744 en HH.EE. (24 horas). Como director subrogante, podría tener cotizaciones especiales, pero la brecha es extraordinariamente alta incluso considerando eso.',
+  },
+  {
+    nivel: 'INFORMATIVA',
+    color: '#60a5fa',
+    bg: '#0c1a2e',
+    icono: '🔵',
+    titulo: 'Inspector General de Educación con mayor brecha que todos los directores de establecimientos',
+    detalle: 'CACERES DURAN, Ximena (Planta Educación – INSPECTOR GENERAL): Bruta $3.137.685 / Líquida $1.257.967 = 59,9% de descuento, la mayor brecha absoluta entre los 81 docentes de planta. Los 4 directores de establecimientos tienen brechas de entre 26% y 60%.',
+  },
+];
+
+const seccion = document.createElement('div');
+seccion.innerHTML = `
+  <p class="section-title" style="margin-top:2rem">Anomalías detectadas</p>
+  <p style="color:var(--muted);font-size:.82rem;margin-bottom:1rem;">Hallazgos que requieren verificación o auditoría. Ordenados por nivel de riesgo.</p>
+  <div id="anomGrid"></div>
+`;
+document.body.appendChild(seccion);
+
+const grid = document.getElementById('anomGrid');
+grid.style.cssText = 'display:flex;flex-direction:column;gap:.75rem;';
+
+anomalias.forEach(a => {
+  const card = document.createElement('div');
+  card.style.cssText = `background:${a.bg};border:1px solid ${a.color}55;border-left:3px solid ${a.color};border-radius:10px;padding:1rem 1.25rem;`;
+  card.innerHTML = `
+    <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem;">
+      <span style="font-size:.7rem;font-weight:700;color:${a.color};letter-spacing:.08em;border:1px solid ${a.color}66;padding:.15rem .5rem;border-radius:4px;">${a.nivel}</span>
+      <span style="font-weight:600;font-size:.9rem;">${a.icono} ${a.titulo}</span>
+    </div>
+    <p style="color:#cbd5e1;font-size:.8rem;line-height:1.6;">${a.detalle}</p>
+  `;
+  grid.appendChild(card);
+});
+</script>
+</body>
+</html>

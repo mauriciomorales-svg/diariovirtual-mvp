@@ -1,0 +1,92 @@
+# -*- coding: utf-8 -*-
+"""Filas — Personal a Contrata salud (Ley 19.378), Renaico febrero 2026."""
+from __future__ import annotations
+
+REG = "Región de La Araucanía"
+OBS = "Sin observaciones"
+
+
+def build_rows_contrata_salud() -> list[list]:
+    def mk(est, nom, cargo, grado, cal, asig, b, l, dhe, hd, hn, hf, fi, ft, via="No informa"):
+        return [
+            2026,
+            "Febrero",
+            est,
+            nom,
+            cargo,
+            grado,
+            cal,
+            REG,
+            asig,
+            b,
+            l,
+            "",
+            "",
+            dhe,
+            hd,
+            hn,
+            hf,
+            fi,
+            ft,
+            via,
+            OBS,
+        ]
+
+    out = [
+        mk("Otros profesionales (Ley 19.378)", "ABURTO RUBILAR, JUAQUIN", "PROFESIONAL INFORMATICA", 12, "UNIVERSITARIA", "(12)(68)(30)(43)(37)(26)(47)(107)(101)", 1946353, 1591153, "Sí", "$ 124.553 : 13,00 hrs", "No tiene", "No tiene", "01/03/2018", "31/12/2026"),
+        mk("Otros profesionales (Ley 19.378)", "AGUILERA AMAYA, MONICA KRETIEL", "TRABAJADORA SOCIAL", 15, "UNIVERSITARIA", "(68)(30)(43)(37)(26)(101)", 1460996, 1083684, "Sí", "No tiene", "No tiene", "No tiene", "09/09/2024", "31/12/2026"),
+        mk("Auxiliares de servicios de Salud", "AGUILERA CAYUMAN, MARCELO ANDRES", "CONDUCTOR", 14, "EDUCACION MEDIA", "(37)(30)(43)(47)(26)(107)(101)", 775201, 517000, "Sí", "No tiene", "No tiene", "No tiene", "02/11/2022", "31/12/2026"),
+        mk("Otros profesionales (Ley 19.378)", "ALVARADO MARTINEZ, RODRIGO ANDRES", "ENFERMERO", 15, "UNIVERSITARIA", "(30)(43)(37)(26)(101)", 1436610, 1202497, "Sí", "No tiene", "No tiene", "No tiene", "12/08/2024", "31/12/2026"),
+        mk("Técnicos de nivel superior (Ley 19.378)", "ARANGUIZ BILZ, KIARA", "TENS", 13, "TECNICO DE NIVEL SUPERIOR", "(12)(30)(43)(37)(26)(47)(107)(101)", 1103531, 775723, "Sí", "$ 106.789 : 23,00 hrs", "No tiene", "No tiene", "03/02/2023", "31/12/2026"),
+        mk("Administrativos de Salud", "ASTETE TOBAR, CAROLINA", "ADMINISTRATIVO", 15, "EDUCACION MEDIA", "(30)(43)(37)(26)(101)", 158570, 133379, "Sí", "No tiene", "No tiene", "No tiene", "11/02/2026", "31/12/2026"),
+        mk("Técnicos de nivel superior (Ley 19.378)", "BASTIAS GARCES, FRANCO", "TECNICO ADMINISTRACION", 14, "TECNICO DE NIVEL SUPERIOR", "(12)(30)(43)(37)(26)(47)(107)(101)", 1061658, 660913, "Sí", "$ 51.689 : 11,00 hrs", "No tiene", "No tiene", "21/10/2021", "31/12/2026"),
+        mk("Técnicos de nivel superior (Ley 19.378)", "BILZ MARIANGEL, CAROL ALEXANDRA", "TENS EN ENFERMERIA", 11, "TECNICO DE NIVEL SUPERIOR", "(30)(43)(37)(26)(47)(107)(101)", 1166923, 989602, "Sí", "No tiene", "No tiene", "No tiene", "01/01/2013", "31/12/2026"),
+        mk("Otros profesionales (Ley 19.378)", "BORQUEZ ACUÑA, FRANCISCA JAVIERA", "PROFESIONAL ADQUISICIONES", 14, "UNIVERSITARIA", "(12)(30)(43)(37)(47)(26)(107)(101)", 1785116, 1459784, "Sí", "$ 230.468 : 28,00 hrs", "No tiene", "No tiene", "24/04/2023", "31/12/2026"),
+        mk("Auxiliares de servicios de Salud", "CABEZAS PAREDES, JORGE LUIS", "CONDUCTOR", 14, "EDUCACION MEDIA", "(13)(12)(46)(30)(43)(37)(26)(47)(107)(101)", 1066476, 761457, "Sí", "$ 135.920 : 40,00 hrs", "$ 73.404 : 18,00 hrs", "No tiene", "12/07/2023", "31/12/2026"),
+        mk("Auxiliares de servicios de Salud", "CAMPOS POBLETE, CLAUDIA ELIZABETH", "AUXILIAR DE SERVICIOS", 15, "EDUCACION MEDIA", "(30)(43)(37)(26)(101)", 729696, 471845, "Sí", "No tiene", "No tiene", "No tiene", "02/11/2015", "31/12/2026"),
+        mk("Otros profesionales (Ley 19.378)", "CERDA BENAVIDES, FERNANDA", "MATRONA", 15, "UNIVERSITARIA", "(30)(43)(37)(26)(101)", 674180, 568941, "Sí", "No tiene", "No tiene", "No tiene", "14/02/2026", "08/05/2026"),
+        mk("Técnicos de nivel superior (Ley 19.378)", "CHAVEZ GONZALEZ, CONSTANZA JAVIERA", "TENS EN ENFERMERIA", 15, "TECNICO DE NIVEL SUPERIOR", "(30)(43)(37)(26)(101)", 879076, 749840, "Sí", "No tiene", "No tiene", "No tiene", "20/05/2024", "31/12/2026"),
+        mk("Administrativos de Salud", "CID GONZALEZ, IGNACIO BENYAMIN", "ADMINISTRATIVO", 15, "EDUCACION MEDIA", "(12)(30)(43)(37)(26)(101)", 854220, 735946, "Sí", "$ 46.293 : 13,00 hrs", "No tiene", "No tiene", "22/07/2024", "31/12/2026"),
+        mk("Auxiliares de servicios de Salud", "CONTRERAS CARO, ROSA", "AUXILIAR DE SERVICIOS", 14, "EDUCACION MEDIA", "(30)(43)(37)(26)(47)(107)(101)", 774343, 662109, "Sí", "No tiene", "No tiene", "No tiene", "20/11/2017", "31/12/2026"),
+        mk("Técnicos de nivel superior (Ley 19.378)", "CORDOVA GARCES, BERNARDA", "TECNICO ADMINISTRACION", 11, "TECNICO DE NIVEL SUPERIOR", "(30)(43)(37)(26)(47)(107)(101)", 1114076, 930755, "Sí", "No tiene", "No tiene", "No tiene", "17/12/2012", "31/12/2026"),
+        mk("Auxiliares de servicios de Salud", "DIAZ ULLOA, JORGE HERNAN", "CONDUCTOR", 14, "EDUCACION MEDIA", "(12)(30)(46)(43)(37)(26)(47)(107)(101)", 1019519, 887805, "Sí", "$ 109.680 : 30,00 hrs", "No tiene", "No tiene", "16/06/2021", "31/12/2026"),
+        mk("Otros profesionales (Ley 19.378)", "DONOSO MONTOYA, ALEJANDRA", "ENFERMERA", 13, "UNIVERSITARIA", "(12)(68)(30)(43)(37)(26)(47)(107)(101)", 1842182, 1258498, "Sí", "$ 80.154 : 9,00 hrs", "No tiene", "No tiene", "05/06/2024", "31/12/2026"),
+        mk("Técnicos de nivel superior (Ley 19.378)", "ESCOBAR SOTO, MIRZA TAMARA", "TENS EN ENFERMERIA", 10, "TECNICO DE NIVEL SUPERIOR", "(30)(43)(37)(26)(47)(107)(101)", 1281406, 1086855, "Sí", "No tiene", "No tiene", "No tiene", "14/09/2011", "31/12/2026"),
+        mk("Médicos cirujanos, farmacéuticos, químico-farmacéuticos, bioquímicos, cirujano-dentistas", "FIGUEROA GONZALEZ, MARTIN", "ODONTOLOGO", 14, "UNIVERSITARIA", "(12)(68)(30)(43)(37)(26)(47)(107)(101)", 2228970, 1767596, "Sí", "$ 32.502 : 3,00 hrs", "No tiene", "No tiene", "10/07/2023", "31/12/2026"),
+        mk("Técnicos de nivel superior (Ley 19.378)", "FLORES PAREDES, JOCELIN MARLEN", "ADMINISTRATIVO", 14, "TECNICO DE NIVEL SUPERIOR", "(30)(43)(37)(26)(47)(107)(101)", 936708, 492865, "Sí", "No tiene", "No tiene", "No tiene", "22/06/2023", "31/12/2026"),
+        mk("Técnicos de nivel superior (Ley 19.378)", "GARRIDO VALLEJOS, JUAN ALEXIS", "TENS ENFERMERIA", 12, "TECNICO DE NIVEL SUPERIOR", "(13)(12)(30)(43)(37)(26)(47)(107)(101)", 1472536, 1311316, "Sí", "$ 198.800 : 40,00 hrs", "$ 214.704 : 36,00 hrs", "No tiene", "20/11/2024", "31/12/2026"),
+        mk("Técnicos de nivel superior (Ley 19.378)", "GARRIDO VERGARA, ALEX", "TENS ENFERMERIA", 14, "TECNICO DE NIVEL SUPERIOR", "(30)(43)(37)(26)(47)(107)(101)", 795967, 653060, "Sí", "No tiene", "No tiene", "No tiene", "08/10/2020", "31/12/2026"),
+        mk("Otros profesionales (Ley 19.378)", "GONZALEZ AVILA, FERNANDA", "ENFERMERA", 15, "UNIVERSITARIA", "(30)(43)(37)(26)(101)", 555537, 466992, "Sí", "No tiene", "No tiene", "No tiene", "18/02/2026", "02/03/2026"),
+        mk("Auxiliares de servicios de Salud", "GUEVARA PUENTES, ALEX ALEXIS", "CONDUCTOR", 14, "TECNICO DE NIVEL SUPERIOR", "(13)(12)(30)(46)(43)(37)(26)(47)(107)(101)", 1084936, 953289, "Sí", "$ 146.240 : 40,00 hrs", "$ 21.935 : 5,00 hrs", "No tiene", "01/11/2020", "31/12/2026"),
+        mk("Técnicos de nivel superior (Ley 19.378)", "HENRIQUEZ REVECO, JORDANA", "TENS ENFERMERIA", 13, "TECNICO DE NIVEL SUPERIOR", "(30)(43)(37)(26)(47)(107)(101)", 1005741, 859997, "Sí", "No tiene", "No tiene", "No tiene", "17/08/2021", "31/12/2026"),
+        mk("Auxiliares de servicios de Salud", "JIMENEZ ISLA, MIGUEL", "CONDUCTOR", 15, "EDUCACION MEDIA", "(30)(43)(37)(26)(101)", 106547, 88612, "Sí", "No tiene", "No tiene", "No tiene", "25/02/2026", "01/03/2026"),
+        mk("Técnicos de nivel superior (Ley 19.378)", "MANRIQUEZ ELGUETA, ISABEL ALEJANDRA", "ADMINISTRATIVO", 10, "TECNICO DE NIVEL SUPERIOR", "(12)(30)(43)(37)(26)(47)(107)(101)", 1221396, 1053822, "Sí", "$ 50.634 : 9,00 hrs", "No tiene", "No tiene", "01/03/2014", "31/12/2026"),
+        mk("Técnicos de nivel superior (Ley 19.378)", "MARTINEZ CASTILLO, JEANNETTE", "TENS EN ENFERMERIA", "09", "TECNICO DE NIVEL SUPERIOR", "(30)(43)(37)(26)(47)(107)(101)", 1225798, 1012496, "Sí", "No tiene", "No tiene", "No tiene", "03/02/2009", "31/12/2026"),
+        mk("Auxiliares de servicios de Salud", "MOLINA CASTILLO, SONIA ANGELICA", "AUXILIAR DE SERVICIO", 14, "EDUCACION MEDIA", "(30)(43)(37)(26)(47)(107)(101)", 675039, 581221, "Sí", "No tiene", "No tiene", "No tiene", "01/07/2007", "31/12/2026"),
+        mk("Administrativos de Salud", "MOLINA ROJAS, KAREM MARCELA", "ADMINISTRATIVO", 15, "EDUCACION MEDIA", "(30)(43)(37)(26)(101)", 803923, 657585, "Sí", "No tiene", "No tiene", "No tiene", "27/01/2025", "31/12/2026"),
+        mk("Otros profesionales (Ley 19.378)", "MUÑOZ GARCIA, CLAUDIA", "NUTRICIONISTA", 12, "UNIVERSITARIA", "(30)(43)(37)(26)(47)(107)(101)", 1007708, 872154, "Sí", "No tiene", "No tiene", "No tiene", "15/04/2019", "31/12/2026"),
+        mk("Médicos cirujanos, farmacéuticos, químico-farmacéuticos, bioquímicos, cirujano-dentistas", "MUÑOZ GARRIDO, IVAN IGNACIO", "MEDICO CIRUJANO", 15, "UNIVERSITARIA", "(44)(30)(43)(37)(26)(101)", 3454647, 3147309, "Sí", "No tiene", "No tiene", "No tiene", "30/09/2024", "31/12/2026"),
+        mk("Otros profesionales (Ley 19.378)", "ORELLANA RUIZ, DANIELA", "ENFERMERA", 14, "UNIVERSITARIA", "(68)(30)(43)(37)(26)(47)(107)(101)", 1742330, 1440295, "Sí", "No tiene", "No tiene", "No tiene", "24/05/2023", "31/12/2026"),
+        mk("Otros profesionales (Ley 19.378)", "ORREGO VÁSQUEZ, VALENTINA ALEJANDRA", "ADMINISTRADORA PÚBLICA", 15, "UNIVERSITARIA", "(12)(30)(43)(37)(26)(101)", 1511430, 1288077, "Sí", "$ 75.560 : 10,00 hrs", "No tiene", "No tiene", "02/06/2025", "31/12/2026"),
+        mk("Técnicos de nivel superior (Ley 19.378)", "ORTEGA CUEVAS, GERMAN ANDRES", "TENS ENFERMERIA", 13, "TECNICO DE NIVEL SUPERIOR", "(30)(43)(37)(26)(47)(107)(101)", 1059014, 899611, "Sí", "No tiene", "No tiene", "No tiene", "01/03/2024", "31/12/2026"),
+        mk("Auxiliares de servicios de Salud", "PACHECO ARRIAGADA, BEATRIZ", "AUXILIAR DE SERVICIO", 15, "EDUCACION MEDIA", "(30)(43)(37)(26)(101)", 568760, 462485, "Sí", "No tiene", "No tiene", "No tiene", "08/11/2022", "31/12/2026"),
+        mk("Otros profesionales (Ley 19.378)", "PACHECO ARRIAGADA, SANDRO DAVIS", "ENCARGADO DE CONVENIOS", "07", "UNIVERSITARIA", "(12)(68)(30)(43)(37)(26)(47)(107)(101)", 2574119, 1407165, "Sí", "$ 129.570 : 10,00 hrs", "No tiene", "No tiene", "01/01/2009", "31/12/2026"),
+        mk("Técnicos de nivel superior (Ley 19.378)", "PAREDES PEREIRA, CAMILA", "TENS", 12, "TECNICO DE NIVEL SUPERIOR", "(30)(43)(37)(26)(47)(107)(101)", 1067282, 913615, "Sí", "No tiene", "No tiene", "No tiene", "01/04/2019", "31/12/2026"),
+        mk("Otros profesionales (Ley 19.378)", "PEÑA MOLINA, NINETH ANABEL", "TRABAJADORA SOCIAL", 15, "UNIVERSITARIA", "(30)(43)(37)(26)(101)", 79631, 67901, "Sí", "No tiene", "No tiene", "No tiene", "19/01/2026", "03/02/2026"),
+        mk("Administrativos de Salud", "QUIÑONES CIFUENTES, CECILIA ANDREA", "ADMINISTRATIVO", 11, "EDUCACION MEDIA", "(30)(43)(37)(26)(47)(107)(101)", 1050879, 746590, "Sí", "No tiene", "No tiene", "No tiene", "27/03/2012", "31/12/2026"),
+        mk("Técnicos de nivel superior (Ley 19.378)", "QUIÑONES CIFUENTES, YARIXA", "TENS ENFERMERIA", 11, "TECNICO DE NIVEL SUPERIOR", "(30)(43)(37)(26)(47)(107)(101)", 1137238, 954003, "Sí", "No tiene", "No tiene", "No tiene", "12/02/2016", "31/12/2026"),
+        mk("Auxiliares de servicios de Salud", "QUIÑONES NAVARRO, JOSE LUIS", "CONDUCTOR", 14, "EDUCACION MEDIA", "(13)(12)(30)(46)(43)(37)(26)(101)", 1021057, 719263, "Sí", "$ 94.200 : 30,00 hrs", "$ 113.040 : 30,00 hrs", "No tiene", "08/11/2022", "31/12/2026"),
+        mk("Otros profesionales (Ley 19.378)", "RAMOS ALBORNOZ, MARIA NATALY", "FINANZAS", "07", "UNIVERSITARIA", "(12)(68)(30)(43)(37)(26)(47)(107)(101)", 2562282, 1581595, "Sí", "$ 129.570 : 10,00 hrs", "No tiene", "No tiene", "01/10/2007", "31/12/2026"),
+        mk("Médicos cirujanos, farmacéuticos, químico-farmacéuticos, bioquímicos, cirujano-dentistas", "REYES ALBORNOZ, JONATHAN ALEXIS", "QUIMICO FARMACEUTICO", 14, "UNIVERSITARIA", "(68)(30)(43)(37)(47)(26)(107)(101)", 2044660, 1337900, "Sí", "No tiene", "No tiene", "No tiene", "10/10/2023", "31/12/2026"),
+        mk("Médicos cirujanos, farmacéuticos, químico-farmacéuticos, bioquímicos, cirujano-dentistas", "SAAVEDRA TRONCOSO, ANDRES ALEXIS", "MEDICO CIRUJANO", 15, "UNIVERSITARIA", "(44)(68)(30)(43)(37)(26)(101)", 3476238, 3147584, "Sí", "No tiene", "No tiene", "No tiene", "01/01/2024", "31/12/2026"),
+        mk("Otros profesionales (Ley 19.378)", "SEPULVEDA BETANCOURT, NINOSKA ISABEL", "KINESIOLOGO", 13, "UNIVERSITARIA", "(68)(30)(43)(37)(26)(47)(107)(101)", 1955801, 1587918, "Sí", "No tiene", "No tiene", "No tiene", "01/03/2018", "31/12/2026"),
+        mk("Auxiliares de servicios de Salud", "SEPULVEDA MEDINA, MARCELO", "AUXILIAR DE SERVICIO", 11, "EDUCACION MEDIA", "(30)(43)(37)(26)(47)(107)(101)", 1799899, 1480653, "Sí", "No tiene", "No tiene", "No tiene", "01/01/2026", "31/12/2026"),
+        mk("Técnicos de nivel superior (Ley 19.378)", "TORRES TORRES, OLGA ALEJANDRA", "TENS EN ENFERMERIA", "08", "TECNICO DE NIVEL SUPERIOR", "(13)(12)(30)(43)(37)(26)(47)(107)(101)", 1788404, 1226324, "Sí", "$ 264.360 : 40,00 hrs", "$ 166.551 : 21,00 hrs", "No tiene", "24/11/2009", "31/12/2026"),
+        mk("Otros profesionales (Ley 19.378)", "VARGAS CHAVEZ, IGNACIA VALENTINA", "MATRONA", 15, "UNIVERSITARIA", "(68)(30)(43)(37)(26)(101)", 1460996, 1229447, "Sí", "No tiene", "No tiene", "No tiene", "12/11/2024", "31/12/2026"),
+        mk("Administrativos de Salud", "VEGA ARANCIBIA, FERNANDA SCARLETTE", "ADMINISTRATIVO", 15, "EDUCACION MEDIA", "(30)(43)(37)(26)(101)", 803923, 701345, "Sí", "No tiene", "No tiene", "No tiene", "28/10/2024", "31/12/2026"),
+        mk("Técnicos de nivel superior (Ley 19.378)", "VERA STUARDO, CONSTANZA", "TENS ENFERMERIA", 11, "TECNICO DE NIVEL SUPERIOR", "(30)(43)(37)(26)(47)(107)(101)", 1118762, 953127, "Sí", "No tiene", "No tiene", "No tiene", "01/02/2016", "31/12/2026"),
+        mk("Auxiliares de servicios de Salud", "VERGARA RIVAS, DANIEL ENOC", "CONDUCTOR", 14, "EDUCACION MEDIA", "(30)(46)(43)(37)(26)(47)(107)(101)", 859185, 608034, "Sí", "No tiene", "No tiene", "No tiene", "08/11/2022", "31/12/2026"),
+        mk("Otros profesionales (Ley 19.378)", "YICHI SAN MARTIN, ANAIS", "ENFERMERA", 14, "UNIVERSITARIA", "(68)(30)(43)(37)(26)(47)(107)(101)", 1591027, 1321805, "Sí", "No tiene", "No tiene", "No tiene", "03/10/2023", "31/12/2026"),
+    ]
+    assert len(out) == 54, len(out)
+    return out

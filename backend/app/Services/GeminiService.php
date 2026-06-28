@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
@@ -12,10 +13,13 @@ class GeminiService
     private $model;
     private $systemInstruction;
 
-    // Modelos disponibles en la API key actual (gemini-2.x)
-    private $availableModels = [
-        'gemini-2.0-flash-001',
+    /** Orden: primero 1.5 (suele ir mejor en nivel gratuito), luego 2.x */
+    private array $availableModels = [
+        'gemini-1.5-flash',
+        'gemini-1.5-flash-latest',
+        'gemini-1.5-flash-8b',
         'gemini-2.0-flash',
+        'gemini-2.0-flash-001',
         'gemini-2.0-flash-lite',
         'gemini-2.5-flash',
         'gemini-2.5-pro',
@@ -234,6 +238,81 @@ EOT;
     }
 
     /**
+     * POST a generateContent con reintentos si Google devuelve 429 (cuota / RPM).
+     */
+    private function executeGeminiHttpPost(string $url, array $payload): Response
+    {
+        $maxAttempts = 6;
+        $response = null;
+
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            $response = Http::timeout(90)
+                ->withHeaders(['Content-Type' => 'application/json'])
+                ->post($url, $payload);
+
+            if ($response->status() !== 429) {
+                return $response;
+            }
+
+            if ($attempt >= $maxAttempts) {
+                return $response;
+            }
+
+            $wait = $this->parseGemini429RetrySeconds($response);
+            if ($wait === null) {
+                $wait = min(90, 5 * $attempt);
+            }
+
+            Log::notice('Gemini 429, reintento tras espera', [
+                'attempt' => $attempt,
+                'wait_seconds' => $wait,
+            ]);
+            sleep($wait);
+        }
+
+        return $response;
+    }
+
+    /**
+     * Extrae segundos de espera recomendados (cabecera Retry-After o cuerpo JSON de Google).
+     */
+    private function parseGemini429RetrySeconds(Response $response): ?int
+    {
+        $ra = $response->header('Retry-After');
+        if ($ra !== null && $ra !== '' && is_numeric($ra)) {
+            return min(120, max(1, (int) $ra));
+        }
+
+        $json = $response->json();
+        if (! is_array($json)) {
+            return null;
+        }
+
+        foreach ($json['error']['details'] ?? [] as $d) {
+            if (! is_array($d)) {
+                continue;
+            }
+            $type = $d['@type'] ?? '';
+            if (str_contains((string) $type, 'RetryInfo')) {
+                $rd = $d['retryDelay'] ?? '';
+                if (is_string($rd) && preg_match('/(\d+)/', $rd, $m)) {
+                    return min(120, max(1, (int) $m[1]));
+                }
+            }
+        }
+
+        $msg = (string) ($json['error']['message'] ?? '');
+        if (preg_match('/retry in (?:approximately )?(\d+)\s*seconds?/i', $msg, $m)) {
+            return min(120, max(1, (int) $m[1]));
+        }
+        if (preg_match('/(\d+)\s*seconds?/i', $msg, $m)) {
+            return min(120, max(1, (int) $m[1]));
+        }
+
+        return null;
+    }
+
+    /**
      * Llama a la API de Gemini
      */
     private function callGeminiAPI(string $prompt, string $model): array
@@ -246,15 +325,13 @@ EOT;
                 'temperature' => 0.7,
                 'topK' => 40,
                 'topP' => 0.95,
-                'maxOutputTokens' => 2048,
+                'maxOutputTokens' => 8192,
             ]
         ];
 
         $startTime = microtime(true);
 
-        $response = Http::timeout(30)
-            ->withHeaders(['Content-Type' => 'application/json'])
-            ->post($url, $payload);
+        $response = $this->executeGeminiHttpPost($url, $payload);
 
         $processingTime = (microtime(true) - $startTime) * 1000;
 
@@ -274,25 +351,147 @@ EOT;
     }
 
     /**
+     * Decodifica JSON que Gemini devuelve a veces con saltos de línea u otros controles sin escapar dentro de strings.
+     */
+    private function parseJsonFromGeminiText(string $raw): array
+    {
+        $text = trim($raw);
+        $text = preg_replace('/^\xEF\xBB\xBF/', '', $text);
+        $text = preg_replace('/^```json\s*/iu', '', $text);
+        $text = preg_replace('/^```\s*/u', '', $text);
+        $text = preg_replace('/\s*```$/u', '', $text);
+        $text = trim($text);
+
+        if ($text === '') {
+            throw new \Exception('Gemini devolvió texto vacío en lugar de JSON.');
+        }
+
+        $flags = JSON_INVALID_UTF8_SUBSTITUTE | JSON_BIGINT_AS_STRING;
+
+        $toTry = [$text];
+        if (preg_match('/\{[\s\S]*\}/s', $text, $m)) {
+            $candidate = $m[0];
+            if ($candidate !== $text) {
+                $toTry[] = $candidate;
+            }
+            $fixed = $this->escapeUnescapedControlCharsInJsonStrings($candidate);
+            if ($fixed !== $candidate) {
+                $toTry[] = $fixed;
+            }
+        }
+
+        $toTry = array_values(array_unique($toTry));
+
+        $lastSyntaxError = null;
+        foreach ($toTry as $chunk) {
+            $data = json_decode($chunk, true, 512, $flags);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                $lastSyntaxError = json_last_error_msg();
+
+                continue;
+            }
+            if (! is_array($data)) {
+                throw new \Exception(
+                    'Gemini devolvió JSON válido pero no un objeto { } (tipo: '.gettype($data).'). Suele ser respuesta bloqueada, truncada o texto fuera del formato.'
+                );
+            }
+
+            return $data;
+        }
+
+        Log::warning('Gemini JSON decode failed', [
+            'json_error' => $lastSyntaxError,
+            'snippet' => mb_substr($text, 0, 500),
+        ]);
+
+        throw new \Exception(
+            'Invalid JSON from Gemini: '.($lastSyntaxError ?? 'no se pudo decodificar')
+        );
+    }
+
+    /**
+     * Convierte caracteres de control ASCII (excepto tab) dentro de comillas en escapes \u00xx válidos para JSON.
+     */
+    private function escapeUnescapedControlCharsInJsonStrings(string $json): string
+    {
+        $out = '';
+        $n = strlen($json);
+        $inString = false;
+        $escape = false;
+
+        for ($i = 0; $i < $n; $i++) {
+            $c = $json[$i];
+
+            if ($escape) {
+                $out .= $c;
+                $escape = false;
+
+                continue;
+            }
+
+            if ($inString && $c === '\\') {
+                $out .= $c;
+                $escape = true;
+
+                continue;
+            }
+
+            if ($c === '"') {
+                $inString = ! $inString;
+                $out .= $c;
+
+                continue;
+            }
+
+            if ($inString) {
+                $ord = ord($c);
+                if ($ord < 32 && $ord !== 9) {
+                    $out .= sprintf('\\u%04x', $ord);
+
+                    continue;
+                }
+            }
+
+            $out .= $c;
+        }
+
+        return $out;
+    }
+
+    /**
      * Procesa y valida la respuesta de Gemini
      */
     private function processResponse(array $response, string $sourceName = '', string $originalUrl = ''): array
     {
-        $generatedText = $response['candidates'][0]['content']['parts'][0]['text'] ?? '';
-
-        if (empty($generatedText)) {
-            throw new \Exception('Empty response from Gemini');
+        if (! empty($response['promptFeedback']['blockReason'])) {
+            throw new \Exception(
+                'Gemini bloqueó el prompt: '.$response['promptFeedback']['blockReason']
+            );
         }
 
-        // Limpiar posible markdown de código
-        $generatedText = preg_replace('/^```json\s*/', '', $generatedText);
-        $generatedText = preg_replace('/\s*```$/', '', $generatedText);
-
-        $parsed = json_decode($generatedText, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new \Exception('Invalid JSON from Gemini: ' . json_last_error_msg());
+        $candidates = $response['candidates'] ?? [];
+        if ($candidates === []) {
+            throw new \Exception('Gemini no devolvió candidatos (bloqueo, cuota o error del modelo).');
         }
+
+        $first = $candidates[0];
+        $finishReason = (string) ($first['finishReason'] ?? '');
+        if ($finishReason === 'MAX_TOKENS') {
+            throw new \Exception(
+                'Gemini cortó la respuesta por límite de tokens (JSON incompleto). Acorta el texto de entrada o reintenta.'
+            );
+        }
+        if ($finishReason !== '' && $finishReason !== 'STOP' && preg_match('/SAFETY|RECITATION|BLOCKLIST|PROHIBITED_CONTENT|SPII|LANGUAGE/i', $finishReason)) {
+            throw new \Exception('Gemini detuvo la generación: '.$finishReason);
+        }
+
+        $generatedText = $first['content']['parts'][0]['text'] ?? '';
+
+        if ($generatedText === '' || $generatedText === null) {
+            throw new \Exception('Empty response from Gemini (sin texto en candidates). finishReason: '.($finishReason ?: 'desconocido'));
+        }
+
+        $parsed = $this->parseJsonFromGeminiText($generatedText);
 
         if (!isset($parsed['success']) || !$parsed['success']) {
             throw new \Exception('Gemini reported failure');
@@ -382,54 +581,131 @@ EOT;
     }
 
     /**
-     * Una sola petición de comprobación (sin getWorkingModel()).
+     * Modelos a probar en health/ping: configurado primero, luego lista (sin duplicados).
+     */
+    private function candidateModelsForPing(): array
+    {
+        $merged = array_merge([$this->model], $this->availableModels);
+
+        return array_values(array_unique(array_filter($merged)));
+    }
+
+    /**
+     * Prioriza el modelo que ya funcionó (caché), luego el resto.
+     *
+     * @param  array<int, string>  $candidates
+     * @return array<int, string>
+     */
+    private function orderCandidatesWithCache(array $candidates): array
+    {
+        try {
+            $cached = Cache::get('gemini_working_model');
+        } catch (\Throwable $e) {
+            Log::debug('Gemini health: cache read skipped', ['error' => $e->getMessage()]);
+
+            return $candidates;
+        }
+
+        if (! is_string($cached) || $cached === '' || ! in_array($cached, $candidates, true)) {
+            return $candidates;
+        }
+
+        return array_values(array_merge([$cached], array_values(array_diff($candidates, [$cached]))));
+    }
+
+    private function parseGeminiApiErrorMessage(\Illuminate\Http\Client\Response $response): ?string
+    {
+        $json = $response->json();
+        if (is_array($json) && isset($json['error']['message']) && is_string($json['error']['message'])) {
+            return $json['error']['message'];
+        }
+
+        return null;
+    }
+
+    /**
+     * Una petición de comprobación por modelo; prueba varios modelos si hay 429 u otro fallo recuperable.
      */
     private function pingGeminiOnce(): array
     {
         try {
-            $model = $this->model;
-            try {
-                $model = Cache::get('gemini_working_model') ?: $this->model;
-            } catch (\Throwable $e) {
-                Log::debug('Gemini health: cache read skipped', ['error' => $e->getMessage()]);
-            }
-            $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$this->apiKey}";
+            $candidates = $this->orderCandidatesWithCache($this->candidateModelsForPing());
+            $lastHttpStatus = null;
+            $lastGoogleMessage = null;
+            $modelsTried = [];
 
-            $pending = Http::timeout(12)
-                ->withHeaders(['Content-Type' => 'application/json']);
+            foreach ($candidates as $model) {
+                $modelsTried[] = $model;
+                $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$this->apiKey}";
 
-            if (method_exists($pending, 'connectTimeout')) {
-                $pending = $pending->connectTimeout(5);
-            }
+                $pending = Http::timeout(12)
+                    ->withHeaders(['Content-Type' => 'application/json']);
 
-            $response = $pending->post($url, [
-                'contents' => [['parts' => [['text' => 'Say "OK"']]]],
-                'generationConfig' => ['maxOutputTokens' => 5]
-            ]);
+                if (method_exists($pending, 'connectTimeout')) {
+                    $pending = $pending->connectTimeout(5);
+                }
 
-            if ($response->status() === 429) {
+                $response = $pending->post($url, [
+                    'contents' => [['parts' => [['text' => 'Say "OK"']]]],
+                    'generationConfig' => ['maxOutputTokens' => 5],
+                ]);
+
+                $lastHttpStatus = $response->status();
+                $lastGoogleMessage = $this->parseGeminiApiErrorMessage($response);
+
+                if ($response->successful()) {
+                    try {
+                        Cache::put('gemini_working_model', $model, 3600);
+                    } catch (\Throwable $e) {
+                        Log::debug('Gemini health: could not cache working model', ['error' => $e->getMessage()]);
+                    }
+
+                    return [
+                        'available' => true,
+                        'error' => null,
+                        'quota_exceeded' => false,
+                        'model' => $model,
+                        'google_error' => null,
+                        'models_tried' => $modelsTried,
+                    ];
+                }
+
+                if ($response->status() === 429) {
+                    Log::notice('Gemini ping 429, trying next model', ['model' => $model, 'google' => $lastGoogleMessage]);
+
+                    continue;
+                }
+
+                // Modelo inexistente u otro error: probar siguiente candidato
+                if (in_array($response->status(), [400, 404], true)) {
+                    Log::notice('Gemini ping model error, trying next', [
+                        'model' => $model,
+                        'status' => $response->status(),
+                        'google' => $lastGoogleMessage,
+                    ]);
+
+                    continue;
+                }
+
                 return [
                     'available' => false,
-                    'error' => 'Cuota agotada (429)',
-                    'quota_exceeded' => true,
-                    'model' => $model
-                ];
-            }
-
-            if (! $response->successful()) {
-                return [
-                    'available' => false,
-                    'error' => 'HTTP ' . $response->status(),
+                    'error' => $this->formatPingFailureMessage($response->status(), $lastGoogleMessage, false),
                     'quota_exceeded' => false,
-                    'model' => $model
+                    'model' => $model,
+                    'google_error' => $lastGoogleMessage,
+                    'models_tried' => $modelsTried,
                 ];
             }
+
+            $is429 = ($lastHttpStatus === 429);
 
             return [
-                'available' => true,
-                'error' => null,
-                'quota_exceeded' => false,
-                'model' => $model
+                'available' => false,
+                'error' => $this->formatPingFailureMessage($lastHttpStatus ?? 0, $lastGoogleMessage, $is429),
+                'quota_exceeded' => $is429,
+                'model' => $this->model,
+                'google_error' => $lastGoogleMessage,
+                'models_tried' => $modelsTried,
             ];
         } catch (\Throwable $e) {
             Log::error('Gemini pingGeminiOnce failed', ['error' => $e->getMessage()]);
@@ -439,8 +715,29 @@ EOT;
                 'error' => $e->getMessage(),
                 'quota_exceeded' => false,
                 'model' => $this->model,
+                'google_error' => null,
+                'models_tried' => [],
             ];
         }
+    }
+
+    private function formatPingFailureMessage(int $status, ?string $googleMessage, bool $rateLimited): string
+    {
+        $detail = $googleMessage ? ' ' . $googleMessage : '';
+
+        if ($rateLimited || $status === 429) {
+            return trim(
+                'Límite o cuota de la API (429 Too Many Requests). No implica solo “mucho uso hoy”: puede ser RPM, modelo o proyecto.'
+                .$detail
+                .' Revisa cuotas en Google Cloud (Generative Language API) y restricciones de la clave.'
+            );
+        }
+
+        if ($status > 0) {
+            return trim('HTTP '.$status.$detail);
+        }
+
+        return 'Error desconocido al contactar Gemini.'.$detail;
     }
 
     /**
@@ -549,15 +846,13 @@ EOT;
                 'temperature' => $config['temperature'] ?? 0.7,
                 'topK' => 40,
                 'topP' => 0.95,
-                'maxOutputTokens' => 2048,
+                'maxOutputTokens' => 8192,
             ]
         ];
 
         $startTime = microtime(true);
 
-        $response = Http::timeout(30)
-            ->withHeaders(['Content-Type' => 'application/json'])
-            ->post($url, $payload);
+        $response = $this->executeGeminiHttpPost($url, $payload);
 
         $processingTime = (microtime(true) - $startTime) * 1000;
 

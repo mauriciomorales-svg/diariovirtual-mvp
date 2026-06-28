@@ -19,11 +19,11 @@ export default function Header() {
 
   const navItems = [
     { name: 'Inicio', href: '/' },
-    { name: 'Angol', href: '/?categoria=angol' },
-    { name: 'Victoria', href: '/?categoria=victoria' },
-    { name: 'Collipulli', href: '/?categoria=collipulli' },
-    { name: 'La Araucanía', href: '/?categoria=araucania' },
-    { name: 'Nacional', href: '/?categoria=nacional' },
+    { name: 'Angol', href: '/categoria/angol' },
+    { name: 'Victoria', href: '/categoria/victoria' },
+    { name: 'Collipulli', href: '/categoria/collipulli' },
+    { name: 'La Araucanía', href: '/categoria/araucania' },
+    { name: 'Nacional', href: '/categoria/nacional' },
     { name: 'Admin', href: `${ADMIN_URL}/admin/dashboard`, external: true },
     { name: 'Crear Noticia', href: `${ADMIN_URL}/admin/articles/create`, external: true },
     { name: 'Traer Externas', href: `${ADMIN_URL}/admin/gemini/enhanced`, external: true },

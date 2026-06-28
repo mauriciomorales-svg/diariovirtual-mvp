@@ -15,6 +15,7 @@ function normalizeArticle(a: Record<string, unknown>): Article {
     status: String(a.status ?? 'published'),
     published_at: String(a.published_at ?? a.created_at ?? new Date().toISOString()),
     content: a.content ? String(a.content) : undefined,
+    metadata: a.metadata as Article['metadata'],
   };
 }
 

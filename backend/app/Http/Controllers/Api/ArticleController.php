@@ -26,12 +26,14 @@ class ArticleController extends Controller
     public function show($slug)
     {
         $cacheKey = "article:show:{$slug}";
-        
+
         $article = Cache::remember($cacheKey, 1800, function () use ($slug) { // 30 minutes TTL
             return Article::where('slug', $slug)
                 ->published()
                 ->firstOrFail();
         });
+
+        $this->recordArticleView($article->id);
 
         return response()->json($article);
     }
@@ -47,6 +49,22 @@ class ArticleController extends Controller
             abort(404);
         }
 
+        $this->recordArticleView($article->id);
+
         return response()->json($article);
+    }
+
+    private function recordArticleView(string $articleId): void
+    {
+        try {
+            $updated = Article::where('id', $articleId)->increment('view_count', 1, [
+                'last_viewed_at' => now(),
+            ]);
+            if ($updated === 0) {
+                return;
+            }
+        } catch (\Throwable) {
+            // Columna view_count puede no existir aún en entornos sin migrar
+        }
     }
 }

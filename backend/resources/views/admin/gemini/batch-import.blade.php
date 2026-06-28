@@ -280,6 +280,12 @@ Fuente: Otro medio</pre>
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Procesando...';
             try {
+                const gapMs = 5000;
+                const now = Date.now();
+                if (typeof window._lastGeminiBatchAiTs === 'number' && (now - window._lastGeminiBatchAiTs) < gapMs) {
+                    await new Promise(r => setTimeout(r, gapMs - (now - window._lastGeminiBatchAiTs)));
+                }
+                window._lastGeminiBatchAiTs = Date.now();
                 const res = await fetch(transformUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },

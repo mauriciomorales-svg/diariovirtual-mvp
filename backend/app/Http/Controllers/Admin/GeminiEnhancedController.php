@@ -81,9 +81,11 @@ class GeminiEnhancedController extends Controller
             if ($processingMode === 'sync') {
                 // Procesamiento síncrono con configuración avanzada
                 $transformed = $this->geminiService->transformArticleAdvanced(
-                    $content, 
-                    $title, 
-                    $advancedConfig
+                    $content,
+                    $title,
+                    $advancedConfig,
+                    $sourceName,
+                    $sourceUrl
                 );
                 
                 // Auto-publicar si está configurado

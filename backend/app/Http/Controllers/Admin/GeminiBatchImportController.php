@@ -200,17 +200,34 @@ class GeminiBatchImportController extends Controller
             $imageExtractor = app(ImageExtractorService::class);
         }
 
+        $batchDelay = max(0, (int) config('services.gemini.batch_delay_seconds', 5));
+        $aiCallsDone = 0;
+
         foreach ($articles as $article) {
             try {
                 $url = $article['url'] ?: 'https://diariomalleco.local/' . Str::random(12);
                 $sourceHash = hash('sha256', $url);
 
-                if (Article::where('source_hash', $sourceHash)->exists()) {
+                $existing = Article::where('source_hash', $sourceHash)->first();
+                if ($existing) {
+                    if (empty($existing->metadata) && ! empty($article['source'])) {
+                        $existing->metadata = [
+                            'original_source' => $article['source'],
+                            'original_url' => $url,
+                            'transformed_at' => now()->toIso8601String(),
+                        ];
+                        $existing->save();
+                        $processedCount++;
+                    }
                     continue;
                 }
 
                 if ($useAi) {
+                    if ($aiCallsDone > 0 && $batchDelay > 0) {
+                        sleep($batchDelay);
+                    }
                     $transformed = $gemini->transformArticle($article['content'], $article['title']);
+                    $aiCallsDone++;
                     $imageUrl = $transformed['image_url'] ?? $placeholder;
                     if (str_contains($imageUrl, 'via.placeholder')) {
                         $extracted = $imageExtractor->extractFromUrl($url);
@@ -240,6 +257,7 @@ class GeminiBatchImportController extends Controller
                         'transformed' => true,
                     ];
                 } else {
+                    $sourceLabel = $article['source'] ?? 'Agencia de Noticias';
                     Article::create([
                         'title' => '🚨 ' . $article['title'],
                         'slug' => Str::slug($article['title']),
@@ -251,6 +269,11 @@ class GeminiBatchImportController extends Controller
                         'external_url' => $url,
                         'status' => 'published',
                         'published_at' => now(),
+                        'metadata' => [
+                            'original_source' => $sourceLabel,
+                            'original_url' => $url,
+                            'transformed_at' => now()->toIso8601String(),
+                        ],
                     ]);
                     $preview[] = [
                         'title' => '🚨 ' . $article['title'],

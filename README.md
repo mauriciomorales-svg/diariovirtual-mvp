@@ -46,6 +46,12 @@ diariovirtual/
 └── deploy/          # Configuraciones deploy
 ```
 
+## Rol en el modelo de negocio Jobshours
+
+DiarioVirtual opera como **embudo de marketing a bajo costo** dentro del ecosistema Jobshours. No genera ingresos directos; reduce el CAC (costo de adquisición) al captar tráfico orgánico y viral que luego se convierte en leads para Jobshours, ObraControl y Donde Morales. Ver: `jobshours/MODELO_NEGOCIOS_JOBSHOURS.md` (secciones 5, 12, 13, 9b Visibilidad y marketing).
+
+---
+
 ## Objetivo Principal
 
 Generar tráfico viral hacia:

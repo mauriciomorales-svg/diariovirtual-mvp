@@ -20,6 +20,8 @@
             </a>
         </div>
 
+        @include('admin.partials.diario-flow', ['article' => $article])
+
         <div class="bg-white rounded-xl shadow-lg p-6 md:p-8">
             <h1 class="text-2xl font-bold text-gray-800 mb-2">Editar noticia</h1>
             <p class="text-sm text-gray-500 mb-6">ID: <code class="bg-gray-100 px-1 rounded">{{ $article->id }}</code></p>

@@ -1,4 +1,5 @@
 import { getArticles } from '@/lib/api-simple';
+import { filterArticlesByCategoria, categoriaLabel } from '@/lib/articleFilter';
 import { publicArticlePath } from '@/lib/articleUrl';
 import AdminImageEditLink from '@/components/AdminImageEditLink';
 import ArticleCard from '@/components/ArticleCard';
@@ -10,7 +11,12 @@ import { Article } from '@/types/article';
 
 export const dynamic = 'force-dynamic';
 
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ categoria?: string }>;
+}) {
+  const { categoria } = await searchParams;
   let articles: Article[] = [];
   let total = 0;
   let showing = '';
@@ -19,13 +25,19 @@ export default async function HomePage() {
   try {
     const result = await getArticles();
     articles = result.articles;
-    total = result.total;
-    showing = result.showing;
+    if (categoria) {
+      articles = filterArticlesByCategoria(articles, categoria);
+      total = articles.length;
+      showing = `Mostrando ${articles.length} noticias de ${categoriaLabel(categoria)}`;
+    } else {
+      total = result.total;
+      showing = result.showing;
+    }
   } catch (e) {
     error = e instanceof Error ? e.message : 'Error al cargar noticias';
   }
 
-  // Separar noticia destacada (la primera) del resto
+  // Separar noticia destacada (la primera) del resto — orden cronológico del API
   const featuredArticle = articles[0];
   const otherArticles = articles.slice(1);
 
@@ -115,8 +127,6 @@ export default async function HomePage() {
                           </span>
                           <a
                             href={publicArticlePath(featuredArticle)}
-                            target={featuredArticle.is_external ? '_blank' : undefined}
-                            rel={featuredArticle.is_external ? 'noopener noreferrer' : undefined}
                             className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition font-medium"
                           >
                             Leer más →
